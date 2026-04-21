@@ -25,8 +25,6 @@ internal static class CommandLine
 
             case "build":
             case "validate":
-            case "inspect":
-            case "init":
                 Console.Error.WriteLine($"Command '{command}' is not implemented yet.");
                 return 2;
 
@@ -51,8 +49,6 @@ internal static class CommandLine
         writer.WriteLine("Commands:");
         writer.WriteLine("  build             Assemble fragments into output config files.");
         writer.WriteLine("  validate          Validate sources without generating output.");
-        writer.WriteLine("  inspect           Show resolved fragment order and routing.");
-        writer.WriteLine("  init              Initialize a new source directory layout.");
         writer.WriteLine();
     }
 

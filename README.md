@@ -87,8 +87,6 @@ dotnet publish src/ModletBuilder.Cli -c Release -r win-x64 -p:PublishAot=true
 | ------- | ----------- |
 | `build` | Assemble fragments into output config files |
 | `validate` | Validate sources without generating output |
-| `inspect` | Show resolved fragment order and routing |
-| `init` | Initialize a new source directory layout |
 
 ## Repository Layout
 

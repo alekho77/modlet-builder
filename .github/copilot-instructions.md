@@ -185,9 +185,6 @@ When implementing these concepts:
 - Prioritize commands such as:
   - build
   - validate
-  - inspect
-  - explain
-  - init
 - If new commands are added, keep naming short and conventional.
 
 ### Output Modes
