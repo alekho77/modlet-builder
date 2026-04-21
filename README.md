@@ -113,12 +113,47 @@ Build-only metadata (`name`, `target`, `requires`) is stripped from all generate
 
 ## Build and Run
 
-Requires [.NET SDK](https://dotnet.microsoft.com/download) (current stable).
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). The exact SDK version is pinned in [global.json](global.json).
+
+Build the entire solution:
 
 ```bash
-dotnet build src/ModletBuilder.Cli
+dotnet build ModletBuilder.sln
+```
+
+Build outputs are redirected to the repository-root `build/` folder (configured in [Directory.Build.props](Directory.Build.props)):
+
+```text
+build/
+├─ bin/<ProjectName>/<Configuration>/<TargetFramework>/
+└─ obj/<ProjectName>/<Configuration>/<TargetFramework>/
+```
+
+For example, the CLI `Debug` binary lands at:
+
+```text
+build/bin/ModletBuilder.Cli/Debug/net10.0/modlet-builder.exe
+```
+
+Run the built executable directly:
+
+```powershell
+.\build\bin\ModletBuilder.Cli\Debug\net10.0\modlet-builder --version
+```
+
+Or run via the SDK without locating the binary:
+
+```bash
 dotnet run --project src/ModletBuilder.Cli -- build
 ```
+
+To produce an optimized build, use `-c Release`:
+
+```bash
+dotnet build ModletBuilder.sln -c Release
+```
+
+The resulting executable is placed at `build/bin/ModletBuilder.Cli/Release/net10.0/modlet-builder.exe`.
 
 ## Publishing as a Single Executable
 
@@ -133,6 +168,8 @@ Native AOT (fully native binary, if compatible with chosen dependencies):
 ```bash
 dotnet publish src/ModletBuilder.Cli -c Release -r win-x64 -p:PublishAot=true
 ```
+
+Published output is written under `build/bin/ModletBuilder.Cli/Release/net10.0/<runtime>/publish/`.
 
 ## CLI Commands
 
