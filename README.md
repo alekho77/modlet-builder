@@ -148,7 +148,7 @@ To produce an optimized build, use `-c Release`:
 dotnet build ModletBuilder.sln -c Release
 ```
 
-The resulting executable is placed at `build/bin/ModletBuilder.Cli/Release/net10.0/modlet-builder.exe`.
+The resulting executable is placed at `build/bin/ModletBuilder.Cli/Release/net10.0/modlet-builder` (`.exe` on Windows).
 
 ## Publishing as a Single Executable
 
