@@ -33,8 +33,8 @@ This repository contains **modlet-builder**, a build tool authored by **Aleksei 
 ## Technology Baseline
 
 ### Language and Runtime
-- Use **C#** and target **modern .NET**.
-- Prefer the current stable .NET generation already chosen by the repository unless the user explicitly requests otherwise.
+- Use **C#** targeting **.NET 10** (`net10.0`).
+- The SDK version is pinned in [global.json](../global.json); do not change it casually.
 - The tool must be designed as a **CLI-first application**.
 - Keep the codebase ready for publishing as a **single executable**.
 
@@ -88,6 +88,9 @@ Use a structure close to this unless the repository evolves differently by expli
 modlet-builder/
 ├─ README.md
 ├─ LICENSE
+├─ global.json              — pinned .NET SDK version
+├─ Directory.Build.props    — shared MSBuild properties (redirects build output)
+├─ ModletBuilder.sln        — solution file
 ├─ docs/                    — design notes, specs, format docs
 ├─ src/
 │  ├─ ModletBuilder.Cli/    — command-line entrypoint
@@ -96,7 +99,7 @@ modlet-builder/
 │  └─ ModletBuilder.Tests/  — automated tests
 ├─ samples/                 — minimal example inputs and outputs
 ├─ schemas/                 — optional schemas or formal format definitions
-└─ artifacts/               — generated output if intentionally committed
+└─ build/                   — generated build output (bin/ and obj/), git-ignored
 ```
 
 ### Structural Rules
@@ -105,6 +108,14 @@ modlet-builder/
 - Put reusable business logic in `Core`.
 - Keep tests separate from production code.
 - Keep sample projects minimal, focused, and runnable.
+
+### Build Output Layout
+
+- All MSBuild output is redirected to the repository-root `build/` folder via `Directory.Build.props`.
+- Compiled binaries land at `build/bin/<ProjectName>/<Configuration>/<TargetFramework>/`.
+- Intermediate files land at `build/obj/<ProjectName>/<Configuration>/<TargetFramework>/`.
+- The CLI assembly name is `modlet-builder`, so the Debug executable is `build/bin/ModletBuilder.Cli/Debug/net10.0/modlet-builder.exe`.
+- Do not reintroduce per-project `bin/` or `obj/` folders.
 
 ## Domain Model Expectations
 
@@ -241,7 +252,7 @@ After editing **any** file — including C#, Markdown, JSON, XML, YAML, plain te
 
 At minimum:
 
-- build the affected .NET project if code changed
+- build the affected project (or the whole solution via `dotnet build ModletBuilder.sln`) if code changed
 - run tests if behavior changed
 - validate formatting if formatting tools are already configured in the repository
 - validate generated examples or samples if they were changed
