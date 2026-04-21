@@ -9,6 +9,11 @@ This repository contains **modlet-builder**, a build tool authored by **Aleksei 
 - Respond in the same language the user used in their request.
 - When generating repository-facing content, prefer concise, technical, implementation-oriented wording.
 
+### Response Completion
+- After completing every user request, always end with a single closing sentence in English written in the style of a git commit message — concise, imperative, describing what was done.
+- Examples: `Add copilot-instructions.md to .github/`, `Fix markdownlint errors in README.md`, `Scaffold solution with Cli, Core, and Tests projects`.
+- No additional closing remarks, summaries, or explanations after this sentence.
+
 ### Scope of This Repository
 - This is **not** a game mod repository.
 - This is **not** a repository for gameplay content, lore, assets, or 7DTD XML patches themselves.
