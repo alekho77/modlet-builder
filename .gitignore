@@ -1,0 +1,65 @@
+# Build output (redirected via Directory.Build.props)
+build/
+bin/
+obj/
+
+# Publish output
+publish/
+out/
+artifacts/
+
+# Visual Studio / Rider / VS Code user files
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# Rider
+_ReSharper*/
+*.DotSettings.user
+
+# MSBuild / NuGet
+project.lock.json
+project.fragment.lock.json
+*.nuget.props
+*.nuget.targets
+.nuget/
+packages/
+!**/packages/build/
+*.nupkg
+*.snupkg
+
+# Test results and coverage
+TestResults/
+*.coverage
+*.coveragexml
+coverage*.xml
+coverage*.json
+coverage*.info
+.coverlet/
+
+# Logs and caches
+*.log
+*.tlog
+*.binlog
+.cache/
+
+# OS cruft
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Environment / secrets
+*.env
+*.env.local
+.secrets/
