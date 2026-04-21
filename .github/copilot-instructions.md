@@ -250,6 +250,7 @@ At minimum:
 - run tests if behavior changed
 - validate formatting if formatting tools are already configured in the repository
 - validate generated examples or samples if they were changed
+- check any created or modified Markdown file for markdownlint errors using the VS Code markdownlint extension diagnostics, and fix all reported errors before finishing
 
 ### Tooling Constraint
 
