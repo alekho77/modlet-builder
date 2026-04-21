@@ -113,11 +113,8 @@ The tool is expected to work with **source fragments** that may later be compile
 Typical concepts may include:
 
 - **fragment**
+- **name**
 - **target**
-- **order**
-- **phase**
-- **before**
-- **after**
 - **requires**
 - **source file**
 - **generated file**
@@ -143,9 +140,10 @@ When implementing these concepts:
 
 ### Ordering
 
-- Ordering is a first-class concern.
-- The tool must support deterministic ordering rules.
-- If multiple ordering mechanisms exist, document and enforce precedence clearly.
+- Fragment ordering is determined solely by `requires` dependency declarations.
+- The tool performs a topological sort over the declared dependency graph.
+- Fragments with no dependencies relative to each other are ordered deterministically by their `name` attribute.
+- Circular dependencies must be detected and reported as errors.
 
 ### Validation
 
