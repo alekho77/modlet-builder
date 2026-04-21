@@ -132,16 +132,11 @@ build/
 For example, the CLI `Debug` binary lands at:
 
 ```text
-build/bin/ModletBuilder.Cli/Debug/net10.0/modlet-builder.exe
+build/bin/ModletBuilder.Cli/Debug/net10.0/modlet-builder        # Linux/macOS
+build/bin/ModletBuilder.Cli/Debug/net10.0/modlet-builder.exe    # Windows
 ```
 
-Run the built executable directly:
-
-```powershell
-.\build\bin\ModletBuilder.Cli\Debug\net10.0\modlet-builder --version
-```
-
-Or run via the SDK without locating the binary:
+Run via the SDK without locating the binary:
 
 ```bash
 dotnet run --project src/ModletBuilder.Cli -- build
