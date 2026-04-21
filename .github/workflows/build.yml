@@ -31,4 +31,4 @@ jobs:
         run: dotnet restore ModletBuilder.sln
 
       - name: Build
-        run: dotnet build ModletBuilder.sln --configuration Release --no-restore -p:Version=${{ steps.gitversion.outputs.majorMinorPatch }} -p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} -p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }} -p:InformationalVersion=${{ steps.gitversion.outputs.informationalVersion }}
+        run: dotnet build ModletBuilder.sln --configuration Release --no-restore -p:Version=${{ steps.gitversion.outputs.nuGetVersionV2 }} -p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} -p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }} -p:InformationalVersion=${{ steps.gitversion.outputs.informationalVersion }}
