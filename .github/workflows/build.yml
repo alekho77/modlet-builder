@@ -1,0 +1,33 @@
+name: Build
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v3
+        with:
+          versionSpec: '6.x'
+
+      - name: Determine Version
+        uses: gittools/actions/gitversion/execute@v3
+
+      - name: Restore
+        run: dotnet restore ModletBuilder.sln
+
+      - name: Build
+        run: dotnet build ModletBuilder.sln --configuration Release --no-restore
