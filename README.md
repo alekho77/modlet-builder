@@ -26,7 +26,7 @@ Instead of managing dozens of separate modlets with unpredictable load order, yo
 
 **Output** — vanilla-compatible XML files ready to drop into your `Mods/` folder:
 
-```
+```text
 Config/
   items.xml
   recipes.xml
@@ -46,7 +46,7 @@ Build-only metadata (`target`, `order`, `before`, `after`, `requires`, `phase`) 
 ## Terminology
 
 | Term | Meaning |
-|------|---------|
+| ---- | ------- |
 | **fragment** | A single `<fragment>` element in a source file, containing XML operations for one target config |
 | **target** | The output config file a fragment contributes to (e.g. `items`, `recipes`, `blocks`) |
 | **order** | Numeric hint for fragment sequencing within a target |
@@ -84,7 +84,7 @@ dotnet publish src/ModletBuilder.Cli -c Release -r win-x64 -p:PublishAot=true
 ## CLI Commands
 
 | Command | Description |
-|---------|-------------|
+| ------- | ----------- |
 | `build` | Assemble fragments into output config files |
 | `validate` | Validate sources without generating output |
 | `inspect` | Show resolved fragment order and routing |
