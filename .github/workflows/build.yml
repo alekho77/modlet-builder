@@ -32,3 +32,20 @@ jobs:
 
       - name: Build
         run: dotnet build ModletBuilder.sln --configuration Release --no-restore -p:Version=${{ steps.gitversion.outputs.nuGetVersionV2 }} -p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} -p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }} -p:InformationalVersion=${{ steps.gitversion.outputs.informationalVersion }}
+
+      - name: Write summary
+        if: always()
+        run: |
+          {
+            echo "## Build summary"
+            echo ""
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Configuration | Release |"
+            echo "| NuGet version | \`${{ steps.gitversion.outputs.nuGetVersionV2 }}\` |"
+            echo "| Assembly version | \`${{ steps.gitversion.outputs.assemblySemVer }}\` |"
+            echo "| File version | \`${{ steps.gitversion.outputs.assemblySemFileVer }}\` |"
+            echo "| Informational version | \`${{ steps.gitversion.outputs.informationalVersion }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
