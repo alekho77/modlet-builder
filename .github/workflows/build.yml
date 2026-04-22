@@ -5,8 +5,16 @@ on:
     branches: [main]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  matrix-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,16 +39,36 @@ jobs:
         run: dotnet restore ModletBuilder.sln
 
       - name: Build
-        run: dotnet build ModletBuilder.sln --configuration Release --no-restore -p:Version=${{ steps.gitversion.outputs.nuGetVersionV2 }} -p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} -p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }} -p:InformationalVersion=${{ steps.gitversion.outputs.informationalVersion }}
+        shell: bash
+        run: |
+          dotnet build ModletBuilder.sln \
+            --configuration Release \
+            --no-restore \
+            -p:Version=${{ steps.gitversion.outputs.nuGetVersionV2 }} \
+            -p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} \
+            -p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }} \
+            -p:InformationalVersion=${{ steps.gitversion.outputs.informationalVersion }}
 
       - name: Write summary
         if: always()
+        shell: bash
+        env:
+          BUILD_STATUS: ${{ job.status }}
         run: |
+          case "$BUILD_STATUS" in
+            success)   STATUS_ICON="✅ success" ;;
+            failure)   STATUS_ICON="❌ failure" ;;
+            cancelled) STATUS_ICON="⚪ cancelled" ;;
+            *)         STATUS_ICON="❔ $BUILD_STATUS" ;;
+          esac
           {
-            echo "## Build summary"
+            echo "## Build summary (${{ matrix.rid }})"
             echo ""
             echo "| Field | Value |"
             echo "| --- | --- |"
+            echo "| Status | $STATUS_ICON |"
+            echo "| OS | ${{ matrix.os }} |"
+            echo "| Runtime | \`${{ matrix.rid }}\` |"
             echo "| Configuration | Release |"
             echo "| NuGet version | \`${{ steps.gitversion.outputs.nuGetVersionV2 }}\` |"
             echo "| Assembly version | \`${{ steps.gitversion.outputs.assemblySemVer }}\` |"
@@ -49,3 +77,16 @@ jobs:
             echo "| Commit | \`${{ github.sha }}\` |"
             echo "| Branch | \`${{ github.ref_name }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    needs: matrix-build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate matrix result
+        run: |
+          if [[ "${{ needs.matrix-build.result }}" != "success" ]]; then
+            echo "::error::Matrix build failed: ${{ needs.matrix-build.result }}"
+            exit 1
+          fi
+          echo "All matrix builds succeeded."
