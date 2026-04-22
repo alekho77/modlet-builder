@@ -52,12 +52,21 @@ jobs:
       - name: Write summary
         if: always()
         shell: bash
+        env:
+          BUILD_STATUS: ${{ job.status }}
         run: |
+          case "$BUILD_STATUS" in
+            success)   STATUS_ICON="✅ success" ;;
+            failure)   STATUS_ICON="❌ failure" ;;
+            cancelled) STATUS_ICON="⚪ cancelled" ;;
+            *)         STATUS_ICON="❔ $BUILD_STATUS" ;;
+          esac
           {
             echo "## Build summary (${{ matrix.rid }})"
             echo ""
             echo "| Field | Value |"
             echo "| --- | --- |"
+            echo "| Status | $STATUS_ICON |"
             echo "| OS | ${{ matrix.os }} |"
             echo "| Runtime | \`${{ matrix.rid }}\` |"
             echo "| Configuration | Release |"
