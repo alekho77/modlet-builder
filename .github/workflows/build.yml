@@ -36,14 +36,13 @@ jobs:
         uses: gittools/actions/gitversion/execute@v3
 
       - name: Restore
-        run: dotnet restore ModletBuilder.sln -r ${{ matrix.rid }}
+        run: dotnet restore ModletBuilder.sln
 
       - name: Build
         shell: bash
         run: |
           dotnet build ModletBuilder.sln \
             --configuration Release \
-            --runtime ${{ matrix.rid }} \
             --no-restore \
             -p:Version=${{ steps.gitversion.outputs.nuGetVersionV2 }} \
             -p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} \
