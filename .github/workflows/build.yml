@@ -6,7 +6,15 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,19 +36,31 @@ jobs:
         uses: gittools/actions/gitversion/execute@v3
 
       - name: Restore
-        run: dotnet restore ModletBuilder.sln
+        run: dotnet restore ModletBuilder.sln -r ${{ matrix.rid }}
 
       - name: Build
-        run: dotnet build ModletBuilder.sln --configuration Release --no-restore -p:Version=${{ steps.gitversion.outputs.nuGetVersionV2 }} -p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} -p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }} -p:InformationalVersion=${{ steps.gitversion.outputs.informationalVersion }}
+        shell: bash
+        run: |
+          dotnet build ModletBuilder.sln \
+            --configuration Release \
+            --runtime ${{ matrix.rid }} \
+            --no-restore \
+            -p:Version=${{ steps.gitversion.outputs.nuGetVersionV2 }} \
+            -p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} \
+            -p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }} \
+            -p:InformationalVersion=${{ steps.gitversion.outputs.informationalVersion }}
 
       - name: Write summary
         if: always()
+        shell: bash
         run: |
           {
-            echo "## Build summary"
+            echo "## Build summary (${{ matrix.rid }})"
             echo ""
             echo "| Field | Value |"
             echo "| --- | --- |"
+            echo "| OS | ${{ matrix.os }} |"
+            echo "| Runtime | \`${{ matrix.rid }}\` |"
             echo "| Configuration | Release |"
             echo "| NuGet version | \`${{ steps.gitversion.outputs.nuGetVersionV2 }}\` |"
             echo "| Assembly version | \`${{ steps.gitversion.outputs.assemblySemVer }}\` |"
