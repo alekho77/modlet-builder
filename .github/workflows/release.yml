@@ -16,22 +16,29 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.resolve.outputs.tag }}
+      version: ${{ steps.resolve.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Verify tag exists
+      - name: Verify tag
         id: resolve
         env:
           TAG: ${{ inputs.tag }}
         run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag '$TAG' does not match the required format 'vMAJOR.MINOR.PATCH' produced by the Tag Version workflow."
+            exit 1
+          fi
           if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
             echo "::error::Tag '$TAG' does not exist in this repository."
             exit 1
           fi
+          VERSION="${TAG#v}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
   build:
     needs: verify-tag
@@ -58,20 +65,13 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v3
-        with:
-          versionSpec: '6.0.5'
-
-      - name: Determine Version
-        id: gitversion
-        uses: gittools/actions/gitversion/execute@v3
-
       - name: Restore
         run: dotnet restore src/ModletBuilder.Cli/ModletBuilder.Cli.csproj -r ${{ matrix.rid }}
 
       - name: Publish
         shell: bash
+        env:
+          VERSION: ${{ needs.verify-tag.outputs.version }}
         run: |
           dotnet publish src/ModletBuilder.Cli/ModletBuilder.Cli.csproj \
             --configuration Release \
@@ -81,10 +81,10 @@ jobs:
             -p:PublishSingleFile=true \
             -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:DebugType=embedded \
-            -p:Version=${{ steps.gitversion.outputs.majorMinorPatch }} \
-            -p:AssemblyVersion=${{ steps.gitversion.outputs.majorMinorPatch }}.0 \
-            -p:FileVersion=${{ steps.gitversion.outputs.majorMinorPatch }}.0 \
-            -p:InformationalVersion=${{ steps.gitversion.outputs.majorMinorPatch }} \
+            -p:Version=$VERSION \
+            -p:AssemblyVersion=$VERSION.0 \
+            -p:FileVersion=$VERSION.0 \
+            -p:InformationalVersion=$VERSION \
             -o publish/${{ matrix.rid }}
 
       - name: Package (zip)
