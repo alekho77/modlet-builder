@@ -81,10 +81,10 @@ jobs:
             -p:PublishSingleFile=true \
             -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:DebugType=embedded \
-            -p:Version=${{ steps.gitversion.outputs.nuGetVersionV2 }} \
-            -p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} \
-            -p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }} \
-            -p:InformationalVersion=${{ steps.gitversion.outputs.informationalVersion }} \
+            -p:Version=${{ steps.gitversion.outputs.majorMinorPatch }} \
+            -p:AssemblyVersion=${{ steps.gitversion.outputs.majorMinorPatch }}.0 \
+            -p:FileVersion=${{ steps.gitversion.outputs.majorMinorPatch }}.0 \
+            -p:InformationalVersion=${{ steps.gitversion.outputs.majorMinorPatch }} \
             -o publish/${{ matrix.rid }}
 
       - name: Package (zip)
