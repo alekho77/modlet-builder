@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  matrix-build:
     strategy:
       fail-fast: false
       matrix:
@@ -68,3 +68,16 @@ jobs:
             echo "| Commit | \`${{ github.sha }}\` |"
             echo "| Branch | \`${{ github.ref_name }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    needs: matrix-build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate matrix result
+        run: |
+          if [[ "${{ needs.matrix-build.result }}" != "success" ]]; then
+            echo "::error::Matrix build failed: ${{ needs.matrix-build.result }}"
+            exit 1
+          fi
+          echo "All matrix builds succeeded."
