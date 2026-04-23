@@ -191,9 +191,9 @@ When implementing these concepts:
 ### Usability
 
 - A first-time user should be able to understand the primary workflow quickly.
-- Prioritize commands such as:
-  - build
-  - validate
+- The primary command is:
+  - `build` — assemble fragments into output config files
+- Validation-only runs are expressed as a flag on `build` (`--dry-run`), not as a separate `validate` command. `--dry-run` performs all parsing, resolution, and validation steps but must not write any files to the output folder.
 - If new commands are added, keep naming short and conventional.
 
 ### Output Modes

@@ -171,7 +171,12 @@ Published output is written under `build/bin/ModletBuilder.Cli/Release/net10.0/<
 | Command | Description |
 | ------- | ----------- |
 | `build` | Assemble fragments into output config files |
-| `validate` | Validate sources without generating output |
+
+### `build` options
+
+| Option | Description |
+| ------ | ----------- |
+| `--dry-run` | Validate sources and simulate the build without writing any files to the output folder |
 
 ## Repository Layout
 
