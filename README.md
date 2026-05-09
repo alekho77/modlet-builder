@@ -8,26 +8,39 @@ Instead of managing dozens of separate modlets with unpredictable load order, yo
 
 ## Quick Start for Consumers
 
-**Prerequisites:** the .NET SDK version is pinned in [global.json](global.json). Install that exact version from [dotnet.microsoft.com](https://dotnet.microsoft.com/download/dotnet/10.0).
+1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) matching the version in [global.json](global.json).
+2. Clone the repository:
 
-```bash
-git clone https://github.com/yourusername/modlet-builder.git
-cd modlet-builder
-dotnet build ModletBuilder.sln
-```
+   ```bash
+   git clone https://github.com/yourusername/modlet-builder.git
+   cd modlet-builder
+   ```
 
-The CLI binary lands at:
+3. Publish a self-contained single-file executable to the folder of your choice.
+   Replace `C:\Tools\modlet-builder` with whatever path you want the binary in:
 
-```text
-build/bin/ModletBuilder.Cli/Debug/net10.0/modlet-builder        # Linux/macOS
-build/bin/ModletBuilder.Cli/Debug/net10.0/modlet-builder.exe    # Windows
-```
+   **Windows (x64):**
 
-Or run directly without locating the binary:
+   ```bash
+   dotnet publish src/ModletBuilder.Cli -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o C:\Tools\modlet-builder
+   ```
 
-```bash
-dotnet run --project src/ModletBuilder.Cli -- --help
-```
+   **Linux (x64):**
+
+   ```bash
+   dotnet publish src/ModletBuilder.Cli -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -o ~/tools/modlet-builder
+   ```
+
+   **macOS (arm64):**
+
+   ```bash
+   dotnet publish src/ModletBuilder.Cli -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -o ~/tools/modlet-builder
+   ```
+
+   This produces a single `modlet-builder` (or `modlet-builder.exe` on Windows) file.
+   No .NET runtime is required on the machine where you run the tool.
+
+4. Optionally, add the output folder to your `PATH` so you can call `modlet-builder` from anywhere.
 
 **What goes in:** one or more `*.frag.xml` source fragment files, or directories containing them.
 
