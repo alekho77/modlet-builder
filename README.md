@@ -46,22 +46,26 @@ Instead of managing dozens of separate modlets with unpredictable load order, yo
 
 **What goes in:** one or more `*.frag.xml` source fragment files, or directories containing them.
 
-**What comes out:** generated XML files inside `{mod-dir}/Config/`, ready to drop into your game's `Mods/` folder.
+**What comes out:** generated XML files inside `{mods-dir}/{mod-name}/Config/`, one directory per mod, ready to drop into your game's `Mods/` folder.
 
 ```bash
-modlet-builder build --src path/to/my-fragments --out path/to/MyMod --recursive
+modlet-builder build --src path/to/my-fragments --out path/to/Mods --recursive
 ```
 
-This scans `path/to/my-fragments/` recursively for `*.frag.xml` files, resolves their order, and writes the assembled XML files into `path/to/MyMod/Config/`:
+This scans `path/to/my-fragments/` recursively for `*.frag.xml` files, resolves their order, and writes the assembled XML files into separate mod directories under `path/to/Mods/`:
 
 ```text
-path/to/MyMod/
-└─ Config/
-   ├─ items.xml
-   └─ recipes.xml
+path/to/Mods/
+├─ ModA/
+│  └─ Config/
+│     ├─ items.xml
+│     └─ recipes.xml
+└─ ModB/
+   └─ Config/
+      └─ blocks.xml
 ```
 
-Drop the `MyMod/` folder into your game's `Mods/` directory and you're done.
+Drop the entire `Mods/` folder (or individual mod directories from it) into your game's `Mods/` directory and you're done.
 
 ## Quick Start for Developers
 
@@ -144,10 +148,10 @@ Source documents can be passed to `build` as explicit file paths, or collected a
 
 ### Source document format
 
-A source document containing two fragments that target different output files:
+A source document containing two fragments targeting different mods and different output files:
 
 ```xml
-<modlet>
+<modlet hint="ModA">
 
   <fragment name="my-mod.items.base" target="items">
     <append xpath="/items">
@@ -164,13 +168,23 @@ A source document containing two fragments that target different output files:
 </modlet>
 ```
 
+Fragments may also declare their mod membership individually:
+
+```xml
+<modlet>
+  <fragment name="shared.items"   target="items"   hint="ModA, ModB"> ... </fragment>
+  <fragment name="moda.exclusive" target="recipes" hint="ModA"> ... </fragment>
+</modlet>
+```
+
 ### Attributes
 
 | Attribute | Required | Description |
 | --------- | -------- | ----------- |
 | `name` | Yes | Unique identifier for this fragment. Used as a reference target in `requires`. Suggested convention: `{mod}.{target}.{role}`. |
 | `target` | Yes | The output config file this fragment contributes to. Must be one of the [known target values](#known-target-values). |
-| `requires` | No | Comma-separated list of `name` values this fragment depends on. The tool places all dependencies before this fragment in the output. Dependencies may cross target boundaries. |
+| `requires` | No | Comma-separated list of `name` values this fragment depends on. The tool places all dependencies before this fragment in the output. Dependencies may cross target boundaries but must resolve within the same mod. |
+| `hint` | No | Comma-separated list of mod names this fragment belongs to. Determines which mod directory the fragment's output is written into. Can be set on the `<modlet>` root element (inherited by all child fragments) or overridden on individual `<fragment>` elements. If omitted, the value of `--targets` is used as a fallback; if `--targets` is also absent, the fragment is an error. |
 
 Build-only metadata (`name`, `target`, `requires`) is stripped from all generated output. Only the child elements of `<fragment>` appear in the final XML.
 
@@ -183,7 +197,7 @@ When a directory is passed as a source, the tool scans it for `*.frag.xml` files
 Assembles source fragments into final game-ready XML files.
 
 ```text
-modlet-builder build --src <path> [<path> ...] --out <mod-dir> [--recursive] [--dry-run]
+modlet-builder build --src <path> [<path> ...] --out <mods-dir> [--targets <mod> ...] [--recursive] [--dry-run] [--clean] [--verbosity <level>]
 ```
 
 ### Options
@@ -191,35 +205,59 @@ modlet-builder build --src <path> [<path> ...] --out <mod-dir> [--recursive] [--
 | Option | Required | Description |
 | ------ | -------- | ----------- |
 | `--src <path> [<path> ...]` | Yes | One or more source paths. Each path can be an explicit `*.frag.xml` file or a directory. Paths are space-separated and may be mixed freely. |
-| `--out <mod-dir>` | Yes | Path to the output mod root directory. Generated XML is written into `{mod-dir}/Config/`. Required even with `--dry-run`. |
+| `--out <mods-dir>` | Yes | Path to the Mods root directory. Each mod is written to `{mods-dir}/{mod-name}/Config/`. Required even with `--dry-run`. |
+| `--targets <mod> [<mod> ...]` | No | One or more mod names to include in this build. Acts as both a filter (only mods in this list are built) and a fallback (fragments with no `hint` are assigned to these mods). If omitted, all mods declared via `hint` attributes are built. |
 | `--recursive` | No | When a directory is given in `--src`, scan its subdirectories recursively for `*.frag.xml` files. |
-| `--dry-run` | No | Validate all source fragments, resolve dependencies, and check the output location — without writing any files. |
+| `--dry-run` | No | Validate all source fragments, resolve dependencies, and report what would be written — without touching the filesystem at all. No directories are created or deleted. |
+| `--clean` | No | Delete the entire `--out` directory before writing output. Ignored when combined with `--dry-run`. |
+| `--verbosity <level>` | No | Controls how much is logged. One of: `debug`, `information` (default), `warning`, `error`, `none`. |
 
 ### Example
 
-Given a single source document `src/mymod.frag.xml`:
+Given source fragments spread across two mods:
 
 ```xml
-<modlet>
-  <fragment name="mymod.items.base"  target="items"> ... </fragment>
-  <fragment name="mymod.items.extra" target="items"   requires="mymod.items.base"> ... </fragment>
-  <fragment name="mymod.recipes"     target="recipes" requires="mymod.items.base"> ... </fragment>
+<!-- src/shared.frag.xml -->
+<modlet hint="ModA, ModB">
+  <fragment name="shared.items.base" target="items"> ... </fragment>
+</modlet>
+
+<!-- src/moda.frag.xml -->
+<modlet hint="ModA">
+  <fragment name="moda.items.extra" target="items"   requires="shared.items.base"> ... </fragment>
+  <fragment name="moda.recipes"     target="recipes" requires="shared.items.base"> ... </fragment>
+</modlet>
+
+<!-- src/modb.frag.xml -->
+<modlet hint="ModB">
+  <fragment name="modb.blocks" target="blocks"> ... </fragment>
 </modlet>
 ```
 
 Run:
 
 ```bash
-modlet-builder build --src src/mymod.frag.xml --out /path/to/MyMod
+modlet-builder build --src src/ --out /path/to/Mods --recursive
 ```
 
 Result:
 
 ```text
-/path/to/MyMod/
-└─ Config/
-   ├─ items.xml      — mymod.items.base followed by mymod.items.extra
-   └─ recipes.xml    — mymod.recipes
+/path/to/Mods/
+├─ ModA/
+│  └─ Config/
+│     ├─ items.xml      — shared.items.base followed by moda.items.extra
+│     └─ recipes.xml    — moda.recipes
+└─ ModB/
+   └─ Config/
+      ├─ items.xml      — shared.items.base
+      └─ blocks.xml     — modb.blocks
+```
+
+To build only ModA:
+
+```bash
+modlet-builder build --src src/ --out /path/to/Mods --targets ModA
 ```
 
 Each generated file has the following structure:
@@ -233,10 +271,10 @@ Each generated file has the following structure:
 
 ### Dry run
 
-`--dry-run` performs all parsing, validation, and dependency resolution steps but does not write any output files. It verifies that `{mod-dir}/Config/` exists or can be created. Use it to catch errors before committing to disk.
+`--dry-run` performs all parsing, validation, and dependency resolution steps but does not touch the filesystem in any way — no files are written, no directories are created or deleted. Use it to catch errors before committing to disk.
 
 ```bash
-modlet-builder build --src src/ --out /path/to/MyMod --recursive --dry-run
+modlet-builder build --src src/ --out /path/to/Mods --recursive --dry-run
 ```
 
 ## Known Target Values
@@ -307,7 +345,9 @@ Known limitations for this phase:
 - Only `*.frag.xml` source format is supported.
 - `target` values not in the table above are hard errors; no custom target extensibility yet.
 
-**Breaking change:** source documents must use root element `<modlet>`. The previous root `<fragment>` format is not supported.
+**Breaking change:** the `--out` option now expects a **Mods root directory**, not a single mod folder. Each mod is written to `{mods-dir}/{mod-name}/Config/`. Fragment source documents must declare mod membership via a `hint` attribute (on the `<modlet>` root or on individual `<fragment>` elements), or via the `--targets` CLI option as a fallback.
+
+**Breaking change (previous):** source documents must use root element `<modlet>`. The previous root `<fragment>` format is not supported.
 
 ## License
 

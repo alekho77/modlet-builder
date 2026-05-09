@@ -11,6 +11,9 @@ internal static class BuildCommand
         string? outputDir = null;
         bool recursive = false;
         bool dryRun = false;
+        var targets = new List<string>();
+        bool clean = false;
+        var verbosity = VerbosityLevel.Information;
 
         int i = 0;
         while (i < args.Length)
@@ -44,6 +47,20 @@ internal static class BuildCommand
                     i++;
                     continue;
 
+                case "--targets":
+                    i++;
+                    if (i >= args.Length || args[i].StartsWith("--", StringComparison.Ordinal))
+                    {
+                        errors.Add("Option '--targets' requires at least one mod name argument.");
+                        break;
+                    }
+                    while (i < args.Length && !args[i].StartsWith("--", StringComparison.Ordinal))
+                    {
+                        targets.Add(args[i]);
+                        i++;
+                    }
+                    continue;
+
                 case "--recursive":
                     recursive = true;
                     i++;
@@ -51,6 +68,23 @@ internal static class BuildCommand
 
                 case "--dry-run":
                     dryRun = true;
+                    i++;
+                    continue;
+
+                case "--clean":
+                    clean = true;
+                    i++;
+                    continue;
+
+                case "--verbosity":
+                    i++;
+                    if (i >= args.Length || args[i].StartsWith("--", StringComparison.Ordinal))
+                    {
+                        errors.Add("Option '--verbosity' requires a level argument (debug, information, warning, error, none).");
+                        break;
+                    }
+                    if (!TryParseVerbosity(args[i], out verbosity))
+                        errors.Add($"Unknown verbosity level '{args[i]}'. Expected one of: debug, information, warning, error, none.");
                     i++;
                     continue;
 
@@ -70,6 +104,27 @@ internal static class BuildCommand
         if (errors.Count > 0)
             return (null, errors);
 
-        return (new BuildOptions(sources.ToArray(), outputDir!, recursive, dryRun), errors);
+        return (new BuildOptions(
+            sources.ToArray(),
+            outputDir!,
+            recursive,
+            dryRun,
+            targets.ToArray(),
+            clean,
+            verbosity), errors);
+    }
+
+    private static bool TryParseVerbosity(string value, out VerbosityLevel level)
+    {
+        (level, bool known) = value.ToLowerInvariant() switch
+        {
+            "debug"       => (VerbosityLevel.Debug,       true),
+            "information" => (VerbosityLevel.Information, true),
+            "warning"     => (VerbosityLevel.Warning,     true),
+            "error"       => (VerbosityLevel.Error,       true),
+            "none"        => (VerbosityLevel.None,        true),
+            _             => (VerbosityLevel.Information, false),
+        };
+        return known;
     }
 }

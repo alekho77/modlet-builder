@@ -1,9 +1,10 @@
 namespace ModletBuilder.Cli;
 
 using ModletBuilder.Core.Generation;
+using ModletBuilder.Core.Logging;
 using ModletBuilder.Core.Models;
 using ModletBuilder.Core.Parsing;
-using ModletBuilder.Core.Resolution;
+using ModletBuilder.Core.Registry;
 using ModletBuilder.Core.SourceDiscovery;
 
 internal static class CommandLine
@@ -48,15 +49,21 @@ internal static class CommandLine
             foreach (var error in parseErrors)
                 Console.Error.WriteLine($"error: {error}");
             Console.Error.WriteLine();
-            Console.Error.WriteLine("Usage: modlet-builder build --src <path> [<path> ...] --out <mod-dir> [--recursive] [--dry-run]");
+            Console.Error.WriteLine(
+                "Usage: modlet-builder build --src <path> [<path> ...] --out <mods-dir> " +
+                "[--targets <mod> ...] [--recursive] [--dry-run] [--clean] [--verbosity <level>]");
             return 64;
         }
 
+        var logger = new BuildLogger(options.Verbosity, Console.Out, Console.Error);
         var allDiagnostics = new List<Diagnostic>();
 
+        // ── Stage 0: Source discovery ─────────────────────────────────────────
         var (files, discoverDiagnostics) = SourceDiscoverer.Discover(options.Sources, options.Recursive);
         allDiagnostics.AddRange(discoverDiagnostics);
+        logger.Debug($"Discovered {files.Count} source file(s).");
 
+        // ── Stage 0: Fragment parsing ─────────────────────────────────────────
         var fragments = new List<Fragment>();
         foreach (var file in files)
         {
@@ -65,39 +72,62 @@ internal static class CommandLine
             fragments.AddRange(fileFragments);
         }
 
-        IReadOnlyList<Fragment> ordered = fragments;
-        if (!HasErrors(allDiagnostics))
+        logger.Debug($"Parsed {fragments.Count} fragment(s) from {files.Count} file(s).");
+
+        if (HasErrors(allDiagnostics))
         {
-            var (resolvedFragments, resolveDiagnostics) = DependencyResolver.Resolve(fragments);
-            allDiagnostics.AddRange(resolveDiagnostics);
-            ordered = resolvedFragments;
+            EmitDiagnostics(allDiagnostics, logger);
+            return 1;
         }
 
-        if (!HasErrors(allDiagnostics))
+        // ── Stage 1–2: Registry and per-mod ordering ──────────────────────────
+        var (modBuilds, registryDiagnostics) = FragmentRegistryBuilder.Build(
+            fragments, options.Targets, logger);
+        allDiagnostics.AddRange(registryDiagnostics);
+
+        if (HasErrors(allDiagnostics))
         {
-            var generateDiagnostics = OutputGenerator.Generate(ordered, options.OutputDir, options.DryRun);
-            allDiagnostics.AddRange(generateDiagnostics);
+            EmitDiagnostics(allDiagnostics, logger);
+            return 1;
         }
 
-        foreach (var d in allDiagnostics)
-        {
-            var writer = d.Severity == DiagnosticSeverity.Error ? Console.Error : Console.Out;
-            writer.WriteLine(d.ToString());
-        }
+        // ── Stage 3: Output generation ────────────────────────────────────────
+        var generateDiagnostics = OutputGenerator.Generate(
+            modBuilds, options.OutputDir, options.DryRun, options.Clean, logger);
+        allDiagnostics.AddRange(generateDiagnostics);
+
+        EmitDiagnostics(allDiagnostics, logger);
 
         if (HasErrors(allDiagnostics))
             return 1;
 
         if (options.DryRun)
-            Console.WriteLine("Dry run completed successfully. No files were written.");
+            logger.Information("Dry run completed. No files were written.");
         else
-            Console.WriteLine($"Build complete. Output written to '{options.OutputDir}'.");
+            logger.Information(
+                $"Build complete. {modBuilds.Count} mod(s) written to '{options.OutputDir}'.");
 
         return 0;
     }
 
     private static bool HasErrors(IEnumerable<Diagnostic> diagnostics) =>
         diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
+
+    private static void EmitDiagnostics(IEnumerable<Diagnostic> diagnostics, BuildLogger logger)
+    {
+        foreach (var d in diagnostics)
+        {
+            switch (d.Severity)
+            {
+                case DiagnosticSeverity.Error:
+                    logger.Error(d.ToString());
+                    break;
+                case DiagnosticSeverity.Warning:
+                    logger.Warning(d.ToString());
+                    break;
+            }
+        }
+    }
 
     private static void PrintAbout(TextWriter writer)
     {
@@ -122,16 +152,22 @@ internal static class CommandLine
         writer.WriteLine("      --version                      Display tool version.");
         writer.WriteLine();
         writer.WriteLine("Commands:");
-        writer.WriteLine("  build                              Assemble fragments into output config files.");
+        writer.WriteLine("  build                              Assemble fragments into output mod directories.");
         writer.WriteLine();
         writer.WriteLine("'build' command options:");
         writer.WriteLine("      --src <path> [<path> ...]  One or more source files or directories");
         writer.WriteLine("                                 containing *.frag.xml files. Required.");
-        writer.WriteLine("      --out <mod-dir>            Output mod root directory. Required.");
-        writer.WriteLine("                                 Generated XML is written to {mod-dir}/Config/.");
+        writer.WriteLine("      --out <mods-dir>           Output Mods root directory. Required.");
+        writer.WriteLine("                                 Each mod is written to {mods-dir}/{mod-name}/Config/.");
+        writer.WriteLine("      --targets <mod> [<mod> ...]  Build only the specified mods. Also used as");
+        writer.WriteLine("                                 fallback mod assignment for fragments with no hint.");
         writer.WriteLine("      --recursive                Scan source directories recursively.");
-        writer.WriteLine("      --dry-run                  Validate sources and simulate the build");
-        writer.WriteLine("                                 without writing any files to the output folder.");
+        writer.WriteLine("      --dry-run                  Validate sources, resolve dependencies, and");
+        writer.WriteLine("                                 report what would be built — without writing files.");
+        writer.WriteLine("      --clean                    Delete all contents of --out before building.");
+        writer.WriteLine("                                 Has no effect with --dry-run.");
+        writer.WriteLine("      --verbosity <level>        Log verbosity: debug, information (default),");
+        writer.WriteLine("                                 warning, error, none.");
         writer.WriteLine();
     }
 

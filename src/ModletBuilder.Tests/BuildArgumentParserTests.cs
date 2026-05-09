@@ -16,6 +16,9 @@ public class BuildArgumentParserTests
         Assert.Equal("C:\\Mods\\MyMod", options.OutputDir);
         Assert.False(options.Recursive);
         Assert.False(options.DryRun);
+        Assert.Empty(options.Targets);
+        Assert.False(options.Clean);
+        Assert.Equal(VerbosityLevel.Information, options.Verbosity);
     }
 
     [Fact]
@@ -49,6 +52,120 @@ public class BuildArgumentParserTests
         Assert.Empty(errors);
         Assert.NotNull(options);
         Assert.True(options.DryRun);
+    }
+
+    [Fact]
+    public void Targets_option_collects_multiple_mod_names()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(
+            ["--src", "src/", "--out", "out", "--targets", "ModA", "ModB", "ModC"]);
+
+        Assert.Empty(errors);
+        Assert.NotNull(options);
+        Assert.Equal(["ModA", "ModB", "ModC"], options.Targets);
+    }
+
+    [Fact]
+    public void Targets_option_with_single_mod_name_is_parsed()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(
+            ["--src", "src/", "--out", "out", "--targets", "MyMod"]);
+
+        Assert.Empty(errors);
+        Assert.NotNull(options);
+        Assert.Equal(["MyMod"], options.Targets);
+    }
+
+    [Fact]
+    public void Targets_without_value_returns_error()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(
+            ["--src", "src/", "--out", "out", "--targets"]);
+
+        Assert.Null(options);
+        Assert.Contains(errors, e => e.Contains("--targets"));
+    }
+
+    [Fact]
+    public void Clean_flag_is_parsed()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(
+            ["--src", "src/", "--out", "out", "--clean"]);
+
+        Assert.Empty(errors);
+        Assert.NotNull(options);
+        Assert.True(options.Clean);
+    }
+
+    [Fact]
+    public void Verbosity_debug_is_parsed()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(
+            ["--src", "src/", "--out", "out", "--verbosity", "debug"]);
+
+        Assert.Empty(errors);
+        Assert.NotNull(options);
+        Assert.Equal(VerbosityLevel.Debug, options.Verbosity);
+    }
+
+    [Fact]
+    public void Verbosity_information_is_parsed()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(
+            ["--src", "src/", "--out", "out", "--verbosity", "information"]);
+
+        Assert.Empty(errors);
+        Assert.Equal(VerbosityLevel.Information, options!.Verbosity);
+    }
+
+    [Fact]
+    public void Verbosity_warning_is_parsed()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(
+            ["--src", "src/", "--out", "out", "--verbosity", "warning"]);
+
+        Assert.Empty(errors);
+        Assert.Equal(VerbosityLevel.Warning, options!.Verbosity);
+    }
+
+    [Fact]
+    public void Verbosity_error_is_parsed()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(
+            ["--src", "src/", "--out", "out", "--verbosity", "error"]);
+
+        Assert.Empty(errors);
+        Assert.Equal(VerbosityLevel.Error, options!.Verbosity);
+    }
+
+    [Fact]
+    public void Verbosity_none_is_parsed()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(
+            ["--src", "src/", "--out", "out", "--verbosity", "none"]);
+
+        Assert.Empty(errors);
+        Assert.Equal(VerbosityLevel.None, options!.Verbosity);
+    }
+
+    [Fact]
+    public void Verbosity_unknown_value_returns_error()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(
+            ["--src", "src/", "--out", "out", "--verbosity", "verbose"]);
+
+        Assert.Null(options);
+        Assert.Contains(errors, e => e.Contains("verbose"));
+    }
+
+    [Fact]
+    public void Verbosity_without_value_returns_error()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(
+            ["--src", "src/", "--out", "out", "--verbosity"]);
+
+        Assert.Null(options);
+        Assert.Contains(errors, e => e.Contains("--verbosity"));
     }
 
     [Fact]

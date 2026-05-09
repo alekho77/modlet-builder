@@ -44,6 +44,9 @@ internal static class FragmentParser
             return ([], diagnostics);
         }
 
+        // Read modlet-level hint (inherited by any fragment that has no own hint).
+        var modletHints = ParseHintAttribute(root.Attribute("hint")?.Value);
+
         // Report unexpected non-<fragment> children
         foreach (var child in root.Elements().Where(e => e.Name.LocalName != "fragment"))
         {
@@ -73,7 +76,7 @@ internal static class FragmentParser
         var fragments = new List<Fragment>(fragmentElements.Count);
         foreach (var el in fragmentElements)
         {
-            var (fragment, fragDiagnostics) = ParseFragmentElement(el, filePath);
+            var (fragment, fragDiagnostics) = ParseFragmentElement(el, filePath, modletHints);
             diagnostics.AddRange(fragDiagnostics);
             if (fragment is not null)
                 fragments.Add(fragment);
@@ -83,7 +86,7 @@ internal static class FragmentParser
     }
 
     private static (Fragment? Fragment, IReadOnlyList<Diagnostic> Diagnostics) ParseFragmentElement(
-        XElement el, string filePath)
+        XElement el, string filePath, string[]? modletHints)
     {
         var diagnostics = new List<Diagnostic>();
 
@@ -120,8 +123,24 @@ internal static class FragmentParser
         var requires = requiresAttr
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
+        // Fragment-level hint overrides modlet-level hint; null means no hint at either level.
+        var fragmentHints = ParseHintAttribute(el.Attribute("hint")?.Value);
+        var effectiveHints = fragmentHints ?? modletHints;
+
         var body = el.Elements().ToList();
 
-        return (new Fragment(name!, target!, requires, filePath, body), diagnostics);
+        return (new Fragment(name!, target!, requires, filePath, body)
+        {
+            RawHints = effectiveHints,
+        }, diagnostics);
+    }
+
+    private static string[]? ParseHintAttribute(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var parts = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return parts.Length > 0 ? parts : null;
     }
 }

@@ -4,4 +4,7 @@ internal sealed record BuildOptions(
     string[] Sources,
     string OutputDir,
     bool Recursive,
-    bool DryRun);
+    bool DryRun,
+    string[] Targets,
+    bool Clean,
+    VerbosityLevel Verbosity);
