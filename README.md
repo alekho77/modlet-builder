@@ -42,17 +42,26 @@ Instead of managing dozens of separate modlets with unpredictable load order, yo
 
 4. Optionally, add the output folder to your `PATH` so you can call `modlet-builder` from anywhere.
 
+### Basic usage
+
 **What goes in:** one or more `*.frag.xml` source fragment files, or directories containing them.
 
 **What comes out:** generated XML files inside `{mod-dir}/Config/`, ready to drop into your game's `Mods/` folder.
 
-```text
-Mods/
-└─ MyMod/
-   └─ Config/
-      ├─ items.xml
-      └─ recipes.xml
+```bash
+modlet-builder build --src path/to/my-fragments --out path/to/MyMod --recursive
 ```
+
+This scans `path/to/my-fragments/` recursively for `*.frag.xml` files, resolves their order, and writes the assembled XML files into `path/to/MyMod/Config/`:
+
+```text
+path/to/MyMod/
+└─ Config/
+   ├─ items.xml
+   └─ recipes.xml
+```
+
+Drop the `MyMod/` folder into your game's `Mods/` directory and you're done.
 
 ## Quick Start for Developers
 
