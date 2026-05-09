@@ -6,7 +6,7 @@ This repository contains **modlet-builder**, a build tool authored by **Aleksei 
 
 ### Language
 - All source code, comments, XML examples, JSON examples, Markdown files, commit messages, and repository documentation must be written in **English**.
-- Respond in the same language the user used in their request.
+- Respond in the same language the user used in their request. The closing git-commit-style sentence (see Response Completion) is always in English regardless of the conversation language.
 - When generating repository-facing content, prefer concise, technical, implementation-oriented wording.
 
 ### Response Completion
@@ -44,7 +44,7 @@ This repository contains **modlet-builder**, a build tool authored by **Aleksei 
   - a **single-file executable**
   - optionally a **self-contained** build
   - optionally **Native AOT**, if compatible with the implementation choices
-- Do not introduce dependencies that make single-file publishing, self-contained publishing, or Native AOT unnecessarily difficult unless clearly justified.
+- Do not introduce dependencies that require additional runtime installations on the target machine, block `PublishSingleFile`, or are documented as incompatible with Native AOT, unless the functional benefit is explicitly justified in code or documentation.
 
 ## Development Principles
 
@@ -191,9 +191,9 @@ When implementing these concepts:
 ### Usability
 
 - A first-time user should be able to understand the primary workflow quickly.
-- Prioritize commands such as:
-  - build
-  - validate
+- The primary command is:
+  - `build` — assemble fragments into output config files
+- A validation-only run performs all parsing, resolution, and validation steps without generating any output files. This is expressed as the `--dry-run` flag on the `build` command, not as a separate `validate` command.
 - If new commands are added, keep naming short and conventional.
 
 ### Output Modes
@@ -328,7 +328,7 @@ At minimum:
 
 ## What to Prioritize in Suggestions and Implementations
 
-When making design or implementation decisions, prefer the option that best supports:
+When instructions from different sections appear to conflict, resolve the ambiguity using the priority order below. When making design or implementation decisions, prefer the option that best supports:
 
 1. deterministic builds
 2. explicit metadata semantics
@@ -338,17 +338,11 @@ When making design or implementation decisions, prefer the option that best supp
 6. maintainable C# / .NET architecture
 7. future extensibility without premature framework complexity
 
+Example: if adding a dependency improves diagnostics (3) but blocks single-file publishing (5), prefer the option that keeps publishing intact unless the diagnostic improvement is clearly essential and cannot be achieved another way.
+
 ## Initial Product Direction
 
-Until the repository defines otherwise, assume the first production goal is:
-
-- a **C# / modern .NET CLI**
-- able to read modular XML source fragments
-- resolve routing and ordering metadata
-- generate final output files deterministically
-- validate the build
-- emit actionable diagnostics
-- be publishable as a single executable
+Until the repository defines otherwise, assume the first production goal is a **C# / modern .NET CLI** that reads modular XML source fragments, resolves routing and ordering metadata, generates final output files deterministically, performs validation and emits actionable diagnostics during the build, and is publishable as a single executable.
 
 ## Anti-Patterns to Avoid
 
