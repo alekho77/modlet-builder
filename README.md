@@ -136,30 +136,32 @@ build/
 
 ## Source Structure and Fragment Files
 
-A `*.frag.xml` file is a **source document**. It may contain one fragment or many fragments. The logical build unit is the `<fragment>` element, not the file itself.
+Each `*.frag.xml` file is a **source document** with root element `<modlet>`. A source document may contain one `<fragment>` or many. The logical build unit is the individual `<fragment>` element, not the file.
 
-This means a single `*.frag.xml` file may contribute content to multiple targets. Dependency resolution, validation, ordering, and target routing all operate per `<fragment>` element.
+A single source document may contribute content to multiple output targets. Dependency resolution, validation, ordering, and target routing all operate per `<fragment>` element.
 
-Fragment files can be passed to `build` as explicit file paths, or collected automatically from a directory.
+Source documents can be passed to `build` as explicit file paths, or collected automatically from a directory.
 
-### Fragment element format
+### Source document format
 
-The examples below show individual `<fragment>` elements. In a real `*.frag.xml` source document, multiple such elements may appear inside the same XML document root.
-
-```xml
-<fragment name="my-mod.items.base" target="items">
-  <append xpath="/items">
-    <!-- item definitions go here -->
-  </append>
-</fragment>
-```
+A source document containing two fragments that target different output files:
 
 ```xml
-<fragment name="my-mod.recipes.base" target="recipes" requires="my-mod.items.base">
-  <append xpath="/recipes">
-    <!-- recipe definitions go here -->
-  </append>
-</fragment>
+<modlet>
+
+  <fragment name="my-mod.items.base" target="items">
+    <append xpath="/items">
+      <!-- item definitions go here -->
+    </append>
+  </fragment>
+
+  <fragment name="my-mod.recipes.base" target="recipes" requires="my-mod.items.base">
+    <append xpath="/recipes">
+      <!-- recipe definitions go here -->
+    </append>
+  </fragment>
+
+</modlet>
 ```
 
 ### Attributes
@@ -195,20 +197,20 @@ modlet-builder build --src <path> [<path> ...] --out <mod-dir> [--recursive] [--
 
 ### Example
 
-Given these source files:
+Given a single source document `src/mymod.frag.xml`:
 
-```text
-src/
-  items/
-    base.frag.xml    — name="mymod.items.base"   target="items"
-    extra.frag.xml   — name="mymod.items.extra"  target="items"    requires="mymod.items.base"
-  recipes.frag.xml   — name="mymod.recipes.main" target="recipes"  requires="mymod.items.base"
+```xml
+<modlet>
+  <fragment name="mymod.items.base"  target="items"> ... </fragment>
+  <fragment name="mymod.items.extra" target="items"   requires="mymod.items.base"> ... </fragment>
+  <fragment name="mymod.recipes"     target="recipes" requires="mymod.items.base"> ... </fragment>
+</modlet>
 ```
 
 Run:
 
 ```bash
-modlet-builder build --src src/items src/recipes.frag.xml --out /path/to/MyMod --recursive
+modlet-builder build --src src/mymod.frag.xml --out /path/to/MyMod
 ```
 
 Result:
@@ -216,8 +218,8 @@ Result:
 ```text
 /path/to/MyMod/
 └─ Config/
-   ├─ items.xml      — content of base.frag.xml followed by extra.frag.xml
-   └─ recipes.xml    — content of recipes.frag.xml
+   ├─ items.xml      — mymod.items.base followed by mymod.items.extra
+   └─ recipes.xml    — mymod.recipes
 ```
 
 Each generated file has the following structure:
@@ -304,6 +306,8 @@ Known limitations for this phase:
 - No `Localization.txt` support.
 - Only `*.frag.xml` source format is supported.
 - `target` values not in the table above are hard errors; no custom target extensibility yet.
+
+**Breaking change:** source documents must use root element `<modlet>`. The previous root `<fragment>` format is not supported.
 
 ## License
 

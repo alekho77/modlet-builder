@@ -6,7 +6,7 @@ namespace ModletBuilder.Core.Parsing;
 
 internal static class FragmentParser
 {
-    internal static (Fragment? Fragment, IReadOnlyList<Diagnostic> Diagnostics) Parse(string filePath)
+    internal static (IReadOnlyList<Fragment> Fragments, IReadOnlyList<Diagnostic> Diagnostics) Parse(string filePath)
     {
         var diagnostics = new List<Diagnostic>();
         XDocument doc;
@@ -21,7 +21,7 @@ internal static class FragmentParser
                 DiagnosticSeverity.Error,
                 $"Malformed XML: {ex.Message}",
                 filePath));
-            return (null, diagnostics);
+            return ([], diagnostics);
         }
         catch (Exception ex)
         {
@@ -29,21 +29,65 @@ internal static class FragmentParser
                 DiagnosticSeverity.Error,
                 $"Could not read file: {ex.Message}",
                 filePath));
-            return (null, diagnostics);
+            return ([], diagnostics);
         }
 
         var root = doc.Root;
 
-        if (root is null || root.Name.LocalName != "fragment")
+        if (root is null || root.Name.LocalName != "modlet")
+        {
+            var found = root is null ? "(empty document)" : $"<{root.Name.LocalName}>";
+            diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                $"Root element must be <modlet>, found {found}.",
+                filePath));
+            return ([], diagnostics);
+        }
+
+        // Report unexpected non-<fragment> children
+        foreach (var child in root.Elements().Where(e => e.Name.LocalName != "fragment"))
         {
             diagnostics.Add(new Diagnostic(
                 DiagnosticSeverity.Error,
-                "Root element must be <fragment>.",
+                $"Unexpected element <{child.Name.LocalName}> inside <modlet>. Only <fragment> elements are allowed.",
                 filePath));
-            return (null, diagnostics);
         }
 
-        var name = root.Attribute("name")?.Value;
+        var fragmentElements = root.Elements()
+            .Where(e => e.Name.LocalName == "fragment")
+            .ToList();
+
+        if (fragmentElements.Count == 0)
+        {
+            // Only add the "no fragments" diagnostic when no more specific errors were already reported
+            if (diagnostics.Count == 0)
+            {
+                diagnostics.Add(new Diagnostic(
+                    DiagnosticSeverity.Error,
+                    "Source document <modlet> contains no <fragment> elements.",
+                    filePath));
+            }
+            return ([], diagnostics);
+        }
+
+        var fragments = new List<Fragment>(fragmentElements.Count);
+        foreach (var el in fragmentElements)
+        {
+            var (fragment, fragDiagnostics) = ParseFragmentElement(el, filePath);
+            diagnostics.AddRange(fragDiagnostics);
+            if (fragment is not null)
+                fragments.Add(fragment);
+        }
+
+        return (fragments, diagnostics);
+    }
+
+    private static (Fragment? Fragment, IReadOnlyList<Diagnostic> Diagnostics) ParseFragmentElement(
+        XElement el, string filePath)
+    {
+        var diagnostics = new List<Diagnostic>();
+
+        var name = el.Attribute("name")?.Value;
         if (string.IsNullOrWhiteSpace(name))
         {
             diagnostics.Add(new Diagnostic(
@@ -52,7 +96,7 @@ internal static class FragmentParser
                 filePath));
         }
 
-        var target = root.Attribute("target")?.Value;
+        var target = el.Attribute("target")?.Value;
         if (string.IsNullOrWhiteSpace(target))
         {
             diagnostics.Add(new Diagnostic(
@@ -72,11 +116,11 @@ internal static class FragmentParser
         if (diagnostics.Count > 0)
             return (null, diagnostics);
 
-        var requiresAttr = root.Attribute("requires")?.Value ?? string.Empty;
+        var requiresAttr = el.Attribute("requires")?.Value ?? string.Empty;
         var requires = requiresAttr
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        var body = root.Elements().ToList();
+        var body = el.Elements().ToList();
 
         return (new Fragment(name!, target!, requires, filePath, body), diagnostics);
     }

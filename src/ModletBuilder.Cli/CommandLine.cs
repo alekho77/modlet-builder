@@ -60,10 +60,9 @@ internal static class CommandLine
         var fragments = new List<Fragment>();
         foreach (var file in files)
         {
-            var (fragment, parseDiagnostics) = FragmentParser.Parse(file);
+            var (fileFragments, parseDiagnostics) = FragmentParser.Parse(file);
             allDiagnostics.AddRange(parseDiagnostics);
-            if (fragment is not null)
-                fragments.Add(fragment);
+            fragments.AddRange(fileFragments);
         }
 
         IReadOnlyList<Fragment> ordered = fragments;

@@ -136,7 +136,7 @@ public class SourceDiscovererTests : IDisposable
     {
         var fullPath = Path.Combine(_tempDir, relativePath.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        File.WriteAllText(fullPath, "<fragment name=\"x\" target=\"items\"/>");
+        File.WriteAllText(fullPath, "<modlet><fragment name=\"x\" target=\"items\"/></modlet>");
         return fullPath;
     }
 }
