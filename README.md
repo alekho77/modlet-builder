@@ -6,7 +6,7 @@ A build tool for assembling modlets and XML patch fragments into final mod outpu
 
 Instead of managing dozens of separate modlets with unpredictable load order, you write small focused fragment files. The tool assembles them into a single vanilla-compatible mod output with explicit, reproducible ordering.
 
-## Quick Start for Consumers
+## Quick Start for Modders
 
 1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) matching the version in [global.json](global.json).
 2. Clone the repository:
