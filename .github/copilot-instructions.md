@@ -6,7 +6,7 @@ This repository contains **modlet-builder**, a build tool authored by **Aleksei 
 
 ### Language
 - All source code, comments, XML examples, JSON examples, Markdown files, commit messages, and repository documentation must be written in **English**.
-- Respond in the same language the user used in their request.
+- Respond in the same language the user used in their request. The closing git-commit-style sentence (see Response Completion) is always in English regardless of the conversation language.
 - When generating repository-facing content, prefer concise, technical, implementation-oriented wording.
 
 ### Response Completion
@@ -340,15 +340,7 @@ When making design or implementation decisions, prefer the option that best supp
 
 ## Initial Product Direction
 
-Until the repository defines otherwise, assume the first production goal is:
-
-- a **C# / modern .NET CLI**
-- able to read modular XML source fragments
-- resolve routing and ordering metadata
-- generate final output files deterministically
-- validate the build
-- emit actionable diagnostics
-- be publishable as a single executable
+Until the repository defines otherwise, assume the first production goal is a **C# / modern .NET CLI** that reads modular XML source fragments, resolves routing and ordering metadata, generates final output files deterministically, performs validation and emits actionable diagnostics during the build, and is publishable as a single executable.
 
 ## Anti-Patterns to Avoid
 
