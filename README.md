@@ -136,9 +136,15 @@ build/
 
 ## Source Structure and Fragment Files
 
-A **source fragment** is a `*.frag.xml` file containing exactly one `<fragment>` root element. Fragment files can be passed to `build` as explicit file paths, or collected automatically from a directory.
+A `*.frag.xml` file is a **source document**. It may contain one fragment or many fragments. The logical build unit is the `<fragment>` element, not the file itself.
 
-### Fragment file format
+This means a single `*.frag.xml` file may contribute content to multiple targets. Dependency resolution, validation, ordering, and target routing all operate per `<fragment>` element.
+
+Fragment files can be passed to `build` as explicit file paths, or collected automatically from a directory.
+
+### Fragment element format
+
+The examples below show individual `<fragment>` elements. In a real `*.frag.xml` source document, multiple such elements may appear inside the same XML document root.
 
 ```xml
 <fragment name="my-mod.items.base" target="items">
