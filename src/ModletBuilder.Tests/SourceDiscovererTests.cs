@@ -132,6 +132,48 @@ public class SourceDiscovererTests : IDisposable
         Assert.Equal(2, files.Count);
     }
 
+    [Fact]
+    public void Explicit_file_and_directory_containing_same_file_are_deduplicated()
+    {
+        var file = CreateFragFile("a.frag.xml");
+
+        // Pass both the file directly and the directory that contains it.
+        var (files, diagnostics) = SourceDiscoverer.Discover([file, _tempDir], recursive: false);
+
+        Assert.Empty(diagnostics);
+        Assert.Single(files);
+    }
+
+    [Fact]
+    public void Non_frag_xml_files_in_directory_are_silently_ignored()
+    {
+        // A plain .xml file in the scan directory must not be returned or cause an error.
+        File.WriteAllText(Path.Combine(_tempDir, "config.xml"), "<config/>");
+        CreateFragFile("a.frag.xml");
+
+        var (files, diagnostics) = SourceDiscoverer.Discover([_tempDir], recursive: false);
+
+        Assert.Empty(diagnostics);
+        Assert.Single(files);
+        Assert.Contains("a.frag.xml", files[0]);
+    }
+
+    [Fact]
+    public void Valid_and_invalid_sources_produce_files_and_diagnostics_together()
+    {
+        var goodFile = CreateFragFile("good.frag.xml");
+        var missing = Path.Combine(_tempDir, "does_not_exist.frag.xml");
+
+        var (files, diagnostics) = SourceDiscoverer.Discover([missing, goodFile], recursive: false);
+
+        // The good file is returned even though one source path is invalid.
+        Assert.Single(files);
+        Assert.Equal(Path.GetFullPath(goodFile), files[0]);
+        // The missing path produces exactly one error diagnostic.
+        Assert.Single(diagnostics);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostics[0].Severity);
+    }
+
     private string CreateFragFile(string relativePath)
     {
         var fullPath = Path.Combine(_tempDir, relativePath.Replace('/', Path.DirectorySeparatorChar));

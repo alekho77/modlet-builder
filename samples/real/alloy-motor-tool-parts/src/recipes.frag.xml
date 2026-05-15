@@ -1,0 +1,18 @@
+<modlet>
+  <!--
+    Alloy Motor Tool Parts — crafting recipe.
+    Source: EV_AlloyMotorToolParts by Aleksei Khozin
+
+    Crafted at the workbench. Locked behind the Salvage Tools progression
+    skill (tag toolPartsA_unlock). Requires the item to be defined first.
+  -->
+  <fragment name="ev-alloy.recipes.base" target="recipes" requires="ev-alloy.items.base">
+    <append xpath="/recipes">
+      <recipe name="motorToolPartsA_Alloy" count="1" craft_area="workbench" craft_time="60" tags="toolPartsA_unlock">
+        <ingredient name="meleeToolAxeT3ChainsawParts" count="1"/>
+        <ingredient name="resourceSilverNugget" count="1"/>
+        <ingredient name="resourceForgedSteel" count="5"/>
+      </recipe>
+    </append>
+  </fragment>
+</modlet>

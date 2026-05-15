@@ -331,6 +331,64 @@ public class FragmentParserTests : IDisposable
             d.Severity == DiagnosticSeverity.Error && d.Message.Contains("unknown"));
     }
 
+    // ── Additional validation edge cases ─────────────────────────────────────
+
+    [Fact]
+    public void Multiple_unknown_attrs_on_fragment_produce_one_error_per_attr()
+    {
+        var file = Write(@"<modlet><fragment name=""mymod.items"" target=""items"" unknown1=""a"" unknown2=""b""><append/></fragment></modlet>");
+
+        var (_, diagnostics) = FragmentParser.Parse(file);
+
+        // Each unknown attribute must produce its own Error diagnostic.
+        Assert.Equal(2, diagnostics.Count(d =>
+            d.Severity == DiagnosticSeverity.Error
+            && (d.Message.Contains("unknown1") || d.Message.Contains("unknown2"))));
+    }
+
+    [Fact]
+    public void Unknown_modlet_attr_does_not_prevent_valid_fragments_from_being_returned()
+    {
+        // <modlet> with an unknown attribute must still parse valid child fragments.
+        var file = Write(@"
+<modlet hint=""SharedMod"">
+  <fragment name=""mymod.items"" target=""items""><append/></fragment>
+</modlet>");
+
+        var (fragments, diagnostics) = FragmentParser.Parse(file);
+
+        // The valid fragment is returned even though the modlet attr is unknown.
+        Assert.Single(fragments);
+        Assert.Equal("mymod.items", fragments[0].Name);
+        Assert.Contains(diagnostics, d =>
+            d.Severity == DiagnosticSeverity.Error && d.Message.Contains("hint"));
+    }
+
+    [Fact]
+    public void Requires_attribute_with_surrounding_whitespace_is_trimmed()
+    {
+        var file = Write("""<modlet><fragment name="mymod.recipes" target="recipes" requires=" a , b  "><append/></fragment></modlet>""");
+
+        var (fragments, diagnostics) = FragmentParser.Parse(file);
+
+        Assert.Empty(diagnostics);
+        Assert.Single(fragments);
+        Assert.Equal(["a", "b"], fragments[0].Requires);
+    }
+
+    [Fact]
+    public void Fragment_with_no_body_elements_is_valid()
+    {
+        // An empty body is allowed — the fragment just contributes nothing to the output.
+        var file = Write(@"<modlet><fragment name=""mymod.empty"" target=""items""></fragment></modlet>");
+
+        var (fragments, diagnostics) = FragmentParser.Parse(file);
+
+        Assert.Empty(diagnostics);
+        Assert.Single(fragments);
+        Assert.Empty(fragments[0].Body);
+    }
+
     private string Write(string xml)
     {
         var path = Path.Combine(_tempDir, Path.GetRandomFileName() + ".frag.xml");

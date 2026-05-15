@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <append xpath="/recipes">
+      <recipe name="rareSniperRifleBundle" count="1" craft_time="2" always_unlocked="true" tags="packMuleCrafting">
+        <ingredient name="evCash" count="55" />
+      </recipe>
+      <recipe name="rareAutoShotgunBundle" count="1" craft_time="2" always_unlocked="true" tags="packMuleCrafting">
+        <ingredient name="evCash" count="55" />
+      </recipe>
+      <recipe name="rareM60Bundle" count="1" craft_time="2" always_unlocked="true" tags="packMuleCrafting">
+        <ingredient name="evCash" count="75" />
+      </recipe>
+      <recipe name="rareSMG5Bundle" count="1" craft_time="2" always_unlocked="true" tags="packMuleCrafting">
+        <ingredient name="evCash" count="65" />
+      </recipe>
+      <recipe name="rareDesertVultureBundle" count="1" craft_time="2" always_unlocked="true" tags="packMuleCrafting">
+        <ingredient name="evCash" count="55" />
+      </recipe>
+      <recipe name="rareArcheryBundle" count="1" craft_time="2" always_unlocked="true" tags="packMuleCrafting">
+        <ingredient name="evCash" count="50" />
+      </recipe>
+    </append>
+</config>

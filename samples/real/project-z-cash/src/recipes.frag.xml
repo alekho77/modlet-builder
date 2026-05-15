@@ -1,0 +1,34 @@
+<modlet>
+  <!--
+    EpicCash recipes for Project Z rare weapon bundles.
+    Source: ZZ_EV_ProjectZCash by Aleksei Khozin
+
+    Each recipe costs evCash and is always available at the Pack Mule
+    crafting station (packMuleCrafting tag).
+
+    Requires evCash to be defined first (pz-cash.items.epiccash) because
+    evCash is used as an ingredient in every recipe below.
+  -->
+  <fragment name="pz-cash.recipes.project-z" target="recipes" requires="pz-cash.items.epiccash">
+    <append xpath="/recipes">
+      <recipe name="rareSniperRifleBundle" count="1" craft_time="2" always_unlocked="true" tags="packMuleCrafting">
+        <ingredient name="evCash" count="55"/>
+      </recipe>
+      <recipe name="rareAutoShotgunBundle" count="1" craft_time="2" always_unlocked="true" tags="packMuleCrafting">
+        <ingredient name="evCash" count="55"/>
+      </recipe>
+      <recipe name="rareM60Bundle" count="1" craft_time="2" always_unlocked="true" tags="packMuleCrafting">
+        <ingredient name="evCash" count="75"/>
+      </recipe>
+      <recipe name="rareSMG5Bundle" count="1" craft_time="2" always_unlocked="true" tags="packMuleCrafting">
+        <ingredient name="evCash" count="65"/>
+      </recipe>
+      <recipe name="rareDesertVultureBundle" count="1" craft_time="2" always_unlocked="true" tags="packMuleCrafting">
+        <ingredient name="evCash" count="55"/>
+      </recipe>
+      <recipe name="rareArcheryBundle" count="1" craft_time="2" always_unlocked="true" tags="packMuleCrafting">
+        <ingredient name="evCash" count="50"/>
+      </recipe>
+    </append>
+  </fragment>
+</modlet>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <append xpath="/items">
+      <item name="evCash">
+        <property name="Extends" value="oldCash" />
+        <property name="CustomIcon" value="oldCash" />
+        <property name="CustomIconTint" value="fff200" />
+        <property name="Tags" value="evCurrency" />
+        <property name="CreativeMode" value="Player" />
+        <property name="SellableToTrader" value="false" />
+        <property name="EconomicValue" value="0" />
+        <property name="Weight" value="0" />
+        <property name="FuelValue" value="0" />
+        <property name="Stacknumber" value="50000" />
+        <property name="Group" value="Resources" />
+      </item>
+
+      <item name="evMotorcycleStarterBundle">
+        <property name="Extends" value="questRewardBundleMaster" />
+        <property name="CreativeMode" value="Player" />
+        <property name="Group" value="Science" />
+        <property name="CustomIcon" value="bundleVehicleMotorCycle" />
+        <property name="CustomIconTint" value="FF6A00" />
+        <property name="ItemTypeIcon" value="bundle" />
+        <property name="DescriptionKey" value="evMotorcycleStarterBundleDesc" />
+        <property class="Action0">
+          <property name="Create_item" value="vehicleMotorcyclePlaceable,ammoGasCan,modVehicleFuelSaver" />
+          <property name="Create_item_count" value="1,5000,1" />
+        </property>
+      </item>
+
+      <item name="evMinibikeStarterBundle">
+        <property name="Extends" value="questRewardBundleMaster" />
+        <property name="CreativeMode" value="Player" />
+        <property name="Group" value="Science" />
+        <property name="CustomIcon" value="bundleVehicleMiniBike" />
+        <property name="CustomIconTint" value="FF6A00" />
+        <property name="ItemTypeIcon" value="bundle" />
+        <property name="DescriptionKey" value="evMinibikeStarterBundleDesc" />
+        <property class="Action0">
+          <property name="Create_item" value="vehicleMinibikePlaceable,ammoGasCan,modVehicleSuperCharger" />
+          <property name="Create_item_count" value="1,3000,1" />
+        </property>
+      </item>
+
+      <item name="evBicycleBundle">
+        <property name="Extends" value="questRewardBundleMaster" />
+        <property name="CreativeMode" value="Player" />
+        <property name="Group" value="Science" />
+        <property name="CustomIcon" value="bundleVehicleParts" />
+        <property name="CustomIconTint" value="FF6A00" />
+        <property name="ItemTypeIcon" value="bundle" />
+        <property name="DescriptionKey" value="evBicycleBundleDesc" />
+        <property class="Action0">
+          <property name="Create_item" value="vehicleBicyclePlaceable,modVehicleStorage" />
+          <property name="Create_item_count" value="1,2" />
+        </property>
+      </item>
+
+      <item name="evTruckStarterBundle">
+        <property name="Extends" value="questRewardBundleMaster" />
+        <property name="CreativeMode" value="Player" />
+        <property name="Group" value="Science" />
+        <property name="CustomIcon" value="bundleVehicle4x4" />
+        <property name="CustomIconTint" value="FF6A00" />
+        <property name="ItemTypeIcon" value="bundle" />
+        <property name="DescriptionKey" value="evTruckStarterBundleDesc" />
+        <property class="Action0">
+          <property name="Create_item" value="vehicleTruck4x4Placeable,ammoGasCan,modVehicleFuelSaver,modVehicleSuperCharger,modVehicleReserveFuelTank" />
+          <property name="Create_item_count" value="1,12000,1,1,1" />
+        </property>
+      </item>
+    </append>
+</config>

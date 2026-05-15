@@ -1,0 +1,27 @@
+<modlet>
+  <!--
+    Epic Bucks (evCash) currency — shared dependency.
+    Source: EV_EpicCash by Aleksei Khozin
+
+    This fragment defines the evCash item that is used as a crafting ingredient
+    by other fragments in this source set. It must be resolved before any
+    fragment that depends on evCash existing (item-groups and recipes).
+  -->
+  <fragment name="pz-cash.items.epiccash" target="items">
+    <append xpath="/items">
+      <item name="evCash">
+        <property name="Extends" value="oldCash"/>
+        <property name="CustomIcon" value="oldCash"/>
+        <property name="CustomIconTint" value="fff200"/>
+        <property name="Tags" value="evCurrency"/>
+        <property name="CreativeMode" value="Player"/>
+        <property name="SellableToTrader" value="false"/>
+        <property name="EconomicValue" value="0"/>
+        <property name="Weight" value="0"/>
+        <property name="FuelValue" value="0"/>
+        <property name="Stacknumber" value="50000"/>
+        <property name="Group" value="Resources"/>
+      </item>
+    </append>
+  </fragment>
+</modlet>

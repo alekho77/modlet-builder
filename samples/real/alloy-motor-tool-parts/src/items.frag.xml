@@ -1,0 +1,23 @@
+<modlet>
+  <!--
+    Alloy Motor Tool Parts — item definition.
+    Source: EV_AlloyMotorToolParts by Aleksei Khozin
+    https://github.com/aclist
+
+    Adds a craftable Tier A enhanced version of chainsaw motor tool parts.
+    The steel-blue tint (7A8C9E) indicates the alloy steel material upgrade.
+    Economic value reflects the cost of the three upgrade ingredients.
+  -->
+  <fragment name="ev-alloy.items.base" target="items">
+    <append xpath="/items">
+      <item name="motorToolPartsA_Alloy">
+        <property name="Extends" value="meleeToolAxeT3ChainsawParts"/>
+        <property name="CustomIcon" value="meleeToolAxeT3ChainsawParts"/>
+        <property name="CustomIconTint" value="7A8C9E"/>
+        <property name="EconomicValue" value="1400"/>
+        <property name="DescriptionKey" value="motorToolPartsA_AlloyDesc"/>
+        <property name="DisplayType" value="resourceGeneric"/>
+      </item>
+    </append>
+  </fragment>
+</modlet>

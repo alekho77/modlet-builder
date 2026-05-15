@@ -180,6 +180,51 @@ public class OutputGeneratorTests : IDisposable
             "Dry run with --clean must not delete files.");
     }
 
+    [Fact]
+    public void Rebuild_overwrites_existing_output_file_without_error()
+    {
+        // First build.
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append id=\"1\"/>")],
+            _tempDir, dryRun: false, clean: false, _nullLogger);
+
+        // Second build with different content — must overwrite silently.
+        var diagnostics = OutputGenerator.Generate(
+            [Frag("a", "items", "<append id=\"2\"/>")],
+            _tempDir, dryRun: false, clean: false, _nullLogger);
+
+        Assert.Empty(diagnostics);
+        var doc = XDocument.Load(Path.Combine(_tempDir, "Config", "items.xml"));
+        Assert.Equal("2", doc.Root!.Elements("append").Single().Attribute("id")?.Value);
+    }
+
+    [Fact]
+    public void Three_distinct_targets_produce_three_output_files()
+    {
+        OutputGenerator.Generate(
+            [
+                Frag("a", "items", "<append/>"),
+                Frag("b", "recipes", "<append/>"),
+                Frag("c", "progression", "<set xpath=\"/x\">1</set>")
+            ],
+            _tempDir, dryRun: false, clean: false, _nullLogger);
+
+        var xmlFiles = Directory.GetFiles(
+            Path.Combine(_tempDir, "Config"), "*.xml", SearchOption.TopDirectoryOnly);
+        Assert.Equal(3, xmlFiles.Length);
+    }
+
+    [Fact]
+    public void XUi_Menu_target_produces_file_in_XUi_Menu_subdirectory()
+    {
+        OutputGenerator.Generate(
+            [Frag("a", "xui_menu_windows", "<window name=\"x\"/>")],
+            _tempDir, dryRun: false, clean: false, _nullLogger);
+
+        var expected = Path.Combine(_tempDir, "Config", "XUi_Menu", "windows.xml");
+        Assert.True(File.Exists(expected));
+    }
+
     private static Fragment Frag(string name, string target, string bodyXml = "<append/>") =>
         new(name, target, [], $"{name}.frag.xml", [XElement.Parse(bodyXml)]);
 }

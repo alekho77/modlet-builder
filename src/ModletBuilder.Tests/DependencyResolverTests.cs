@@ -115,6 +115,58 @@ public class DependencyResolverTests
         Assert.Equal(["a", "m", "z"], ordered.Select(f => f.Name).ToArray());
     }
 
+    [Fact]
+    public void Duplicate_name_diagnostic_includes_first_definition_source_file()
+    {
+        // The diagnostic for a duplicate must reference the source file of the FIRST definition.
+        var first = new Fragment("a", "items", [], "first.frag.xml", []);
+        var second = new Fragment("a", "recipes", [], "second.frag.xml", []);
+
+        var (_, diagnostics) = DependencyResolver.Resolve([first, second]);
+
+        Assert.Contains(diagnostics, d =>
+            d.Severity == DiagnosticSeverity.Error && d.Message.Contains("first.frag.xml"));
+    }
+
+    [Fact]
+    public void Three_fragment_cycle_diagnostic_includes_all_cycle_members_sorted()
+    {
+        // c→a, a→b, b→c forms a 3-way cycle.
+        var a = Frag("a", "items", requires: ["c"]);
+        var b = Frag("b", "items", requires: ["a"]);
+        var c = Frag("c", "items", requires: ["b"]);
+
+        var (ordered, diagnostics) = DependencyResolver.Resolve([a, b, c]);
+
+        Assert.Empty(ordered);
+        var error = Assert.Single(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        // All three member names must appear in the message, sorted.
+        Assert.Contains("'a'", error.Message);
+        Assert.Contains("'b'", error.Message);
+        Assert.Contains("'c'", error.Message);
+        // Verify sorted order: 'a' appears before 'b', 'b' before 'c'.
+        Assert.True(error.Message.IndexOf("'a'", StringComparison.Ordinal)
+            < error.Message.IndexOf("'b'", StringComparison.Ordinal));
+        Assert.True(error.Message.IndexOf("'b'", StringComparison.Ordinal)
+            < error.Message.IndexOf("'c'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Long_transitive_chain_resolves_in_dependency_order()
+    {   // a ← b ← c ← d ← e (each requires the one before it)
+        var a = Frag("a", "items");
+        var b = Frag("b", "items", requires: ["a"]);
+        var c = Frag("c", "items", requires: ["b"]);
+        var d = Frag("d", "items", requires: ["c"]);
+        var e = Frag("e", "items", requires: ["d"]);
+
+        // Submit in reverse order to verify sorting is not input-order dependent.
+        var (ordered, diagnostics) = DependencyResolver.Resolve([e, d, c, b, a]);
+
+        Assert.Empty(diagnostics);
+        Assert.Equal(["a", "b", "c", "d", "e"], ordered.Select(f => f.Name).ToArray());
+    }
+
     private static Fragment Frag(string name, string target, string[]? requires = null) =>
         new(name, target, requires ?? [], $"{name}.frag.xml", []);
 }

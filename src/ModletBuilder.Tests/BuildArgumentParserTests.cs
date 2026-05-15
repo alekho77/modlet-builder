@@ -190,4 +190,24 @@ public class BuildArgumentParserTests
         Assert.Null(options);
         Assert.Contains(errors, e => e.Contains("--src"));
     }
+
+    [Fact]
+    public void Out_without_value_at_end_returns_error()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(["--src", "file.frag.xml", "--out"]);
+
+        Assert.Null(options);
+        Assert.Contains(errors, e => e.Contains("--out"));
+    }
+
+    [Fact]
+    public void Out_specified_twice_uses_last_value()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(
+            ["--src", "file.frag.xml", "--out", "first_out", "--out", "second_out"]);
+
+        Assert.Empty(errors);
+        Assert.NotNull(options);
+        Assert.Equal("second_out", options.OutputDir);
+    }
 }

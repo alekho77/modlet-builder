@@ -1,0 +1,24 @@
+<modlet>
+  <!--
+    Alloy Motor Tool Parts — progression unlock.
+    Source: EV_AlloyMotorToolParts by Aleksei Khozin
+
+    Extends the Salvage Tools crafting skill cap to 100 so the player can
+    read beyond the vanilla limit of 75 Scrapping 4 Fun magazines.
+    Adds a RecipeTagUnlocked passive effect at level 76 that enables the
+    toolPartsA_unlock tag, making the alloy recipe craftable.
+    Also adds a display entry so the unlock appears in the progression menu.
+
+    Requires the item to be defined first (ev-alloy.items.base).
+  -->
+  <fragment name="ev-alloy.progression.unlock" target="progression" requires="ev-alloy.items.base">
+    <set xpath="/progression/crafting_skills/crafting_skill[@name='craftingSalvageTools']/@max_level">100</set>
+    <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingSalvageTools']/effect_group">
+      <passive_effect name="RecipeTagUnlocked" operation="base_set" level="76,100" value="1" tags="toolPartsA_unlock"/>
+    </append>
+    <set xpath="/progression/crafting_skills/crafting_skill[@name='craftingSalvageTools']/display_entry[last()]/@unlock_level">51,55,60,65,70,75,76</set>
+    <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingSalvageTools']/display_entry[last()]">
+      <unlock_entry item="motorToolPartsA_Alloy" unlock_tier="1"/>
+    </append>
+  </fragment>
+</modlet>
