@@ -40,10 +40,10 @@ identical output.
 
 ### alloy-motor-tool-parts
 
-A small three-fragment example: an item definition, a recipe that requires the
-item to be defined first, and a progression unlock that also depends on the item.
+A small three-fragment example: an item definition, a recipe, and a progression
+unlock from a straightforward single-mod source set.
 
-Demonstrates: `requires` dependency ordering, multiple output targets from one source set.
+Demonstrates: multiple output targets from one source set.
 
 ### epic-cash
 
