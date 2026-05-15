@@ -4,231 +4,33 @@ namespace ModletBuilder.Tests;
 public sealed class IntegrationCollection { }
 
 /// <summary>
-/// End-to-end tests that call <c>CommandLine.Run</c> with real filesystem paths.
-/// All tests in this collection run sequentially to prevent Console redirection races.
+/// End-to-end tests that call <c>CommandLine.Run</c>. Filesystem-oriented cases are
+/// driven from samples/tests.yaml; pure CLI parser/dispatch cases remain in code.
 /// </summary>
 [Collection("Integration")]
 public sealed class CommandLineIntegrationTests : IDisposable
 {
-    private readonly string _tempOut;
-    private readonly string _repoRoot;
+    private readonly string _tempRoot;
 
     public CommandLineIntegrationTests()
     {
-        _tempOut = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        _repoRoot = SampleTestHelper.FindRepoRoot();
+        _tempRoot = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(_tempRoot);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempOut))
-            Directory.Delete(_tempOut, recursive: true);
+        if (Directory.Exists(_tempRoot))
+            Directory.Delete(_tempRoot, recursive: true);
     }
 
-    // ── Positive build scenarios ──────────────────────────────────────────────
+    public static IEnumerable<object[]> IntegrationCases() => SampleTestHelper.GetCases("integration");
 
-    [Fact]
-    public void Successful_build_returns_0_and_creates_Config()
+    [Theory]
+    [MemberData(nameof(IntegrationCases))]
+    public void File_system_case_matches_yaml_specification(SampleTestCase testCase)
     {
-        var src = Path.Combine(_repoRoot, "samples", "real", "alloy-motor-tool-parts", "src");
-
-        var exitCode = SampleTestHelper.RunBuildSuppressed(
-            ["build", "--src", src, "--out", _tempOut, "--verbosity", "none"]);
-
-        Assert.Equal(0, exitCode);
-        Assert.True(Directory.Exists(Path.Combine(_tempOut, "Config")));
-    }
-
-    [Fact]
-    public void Dry_run_returns_0_and_does_not_create_output_directory()
-    {
-        var src = Path.Combine(_repoRoot, "samples", "real", "alloy-motor-tool-parts", "src");
-
-        var exitCode = SampleTestHelper.RunBuildSuppressed(
-            ["build", "--src", src, "--out", _tempOut, "--dry-run", "--verbosity", "none"]);
-
-        Assert.Equal(0, exitCode);
-        Assert.False(Directory.Exists(Path.Combine(_tempOut, "Config")));
-    }
-
-    [Fact]
-    public void Clean_removes_stale_file_before_building()
-    {
-        var src = Path.Combine(_repoRoot, "samples", "real", "alloy-motor-tool-parts", "src");
-
-        // Pre-populate the output Config with a stale file.
-        Directory.CreateDirectory(Path.Combine(_tempOut, "Config"));
-        File.WriteAllText(Path.Combine(_tempOut, "Config", "stale.xml"), "<stale/>");
-
-        SampleTestHelper.RunBuildSuppressed(
-            ["build", "--src", src, "--out", _tempOut, "--clean", "--verbosity", "none"]);
-
-        Assert.False(
-            File.Exists(Path.Combine(_tempOut, "Config", "stale.xml")),
-            "Stale file must be removed when --clean is used.");
-        Assert.True(File.Exists(Path.Combine(_tempOut, "Config", "items.xml")));
-    }
-
-        [Fact]
-        public void Unnamed_fragment_build_returns_0_and_creates_output()
-        {
-                var src = Path.Combine(_tempOut, "unnamed-src");
-                Directory.CreateDirectory(src);
-                File.WriteAllText(Path.Combine(src, "items.frag.xml"),
-                        """
-                        <modlet>
-                            <fragment target="items">
-                                <append xpath="/items"><item name="testItem"/></append>
-                            </fragment>
-                        </modlet>
-                        """);
-
-                var outDir = Path.Combine(_tempOut, "unnamed-out");
-                var exitCode = SampleTestHelper.RunBuildSuppressed(
-                        ["build", "--src", src, "--out", outDir, "--verbosity", "none"]);
-
-                Assert.Equal(0, exitCode);
-                Assert.True(File.Exists(Path.Combine(outDir, "Config", "items.xml")));
-        }
-
-        [Fact]
-        public void Unnamed_fragment_with_requires_builds_when_dependency_is_named()
-        {
-                var src = Path.Combine(_tempOut, "unnamed-requires-src");
-                Directory.CreateDirectory(src);
-                File.WriteAllText(Path.Combine(src, "items.frag.xml"),
-                        """
-                        <modlet>
-                            <fragment name="test.items.base" target="items">
-                                <append xpath="/items"><item name="testItem"/></append>
-                            </fragment>
-                        </modlet>
-                        """);
-                File.WriteAllText(Path.Combine(src, "recipes.frag.xml"),
-                        """
-                        <modlet>
-                            <fragment target="recipes" requires="test.items.base">
-                                <append xpath="/recipes"><recipe name="testItem" count="1"/></append>
-                            </fragment>
-                        </modlet>
-                        """);
-
-                var outDir = Path.Combine(_tempOut, "unnamed-requires-out");
-                var exitCode = SampleTestHelper.RunBuildSuppressed(
-                        ["build", "--src", src, "--out", outDir, "--verbosity", "none"]);
-
-                Assert.Equal(0, exitCode);
-                Assert.True(File.Exists(Path.Combine(outDir, "Config", "items.xml")));
-                Assert.True(File.Exists(Path.Combine(outDir, "Config", "recipes.xml")));
-        }
-
-    // ── Negative build scenarios (parse and resolution errors) ───────────────
-
-    [Fact]
-    public void Build_with_missing_dependency_returns_1_and_no_output()
-    {
-        var src = Path.Combine(_repoRoot, "samples", "invalid", "missing-dependency.frag.xml");
-
-        var exitCode = SampleTestHelper.RunBuildSuppressed(
-            ["build", "--src", src, "--out", _tempOut, "--verbosity", "none"]);
-
-        Assert.Equal(1, exitCode);
-        Assert.False(Directory.Exists(Path.Combine(_tempOut, "Config")));
-    }
-
-    [Fact]
-    public void Build_with_duplicate_names_returns_1_and_no_output()
-    {
-        var src = Path.Combine(_repoRoot, "samples", "invalid", "duplicate-names.frag.xml");
-
-        var exitCode = SampleTestHelper.RunBuildSuppressed(
-            ["build", "--src", src, "--out", _tempOut, "--verbosity", "none"]);
-
-        Assert.Equal(1, exitCode);
-        Assert.False(Directory.Exists(Path.Combine(_tempOut, "Config")));
-    }
-
-    [Fact]
-    public void Build_with_cycle_returns_1_and_no_output()
-    {
-        var src = Path.Combine(_repoRoot, "samples", "invalid", "cycle.frag.xml");
-
-        var exitCode = SampleTestHelper.RunBuildSuppressed(
-            ["build", "--src", src, "--out", _tempOut, "--verbosity", "none"]);
-
-        Assert.Equal(1, exitCode);
-        Assert.False(Directory.Exists(Path.Combine(_tempOut, "Config")));
-    }
-
-    [Fact]
-    public void Build_with_unknown_target_returns_1_and_no_output()
-    {
-        var src = Path.Combine(_repoRoot, "samples", "invalid", "unknown-target.frag.xml");
-
-        var exitCode = SampleTestHelper.RunBuildSuppressed(
-            ["build", "--src", src, "--out", _tempOut, "--verbosity", "none"]);
-
-        Assert.Equal(1, exitCode);
-        Assert.False(Directory.Exists(Path.Combine(_tempOut, "Config")));
-    }
-
-    [Fact]
-    public void Build_with_hint_attribute_returns_1_and_no_output()
-    {
-        var src = Path.Combine(_repoRoot, "samples", "invalid", "hint-attribute.frag.xml");
-
-        var exitCode = SampleTestHelper.RunBuildSuppressed(
-            ["build", "--src", src, "--out", _tempOut, "--verbosity", "none"]);
-
-        Assert.Equal(1, exitCode);
-        Assert.False(Directory.Exists(Path.Combine(_tempOut, "Config")));
-    }
-
-    [Fact]
-    public void Build_with_malformed_xml_returns_1_and_no_output()
-    {
-        var src = Path.Combine(_repoRoot, "samples", "invalid", "malformed.frag.xml");
-
-        var exitCode = SampleTestHelper.RunBuildSuppressed(
-            ["build", "--src", src, "--out", _tempOut, "--verbosity", "none"]);
-
-        Assert.Equal(1, exitCode);
-        Assert.False(Directory.Exists(Path.Combine(_tempOut, "Config")));
-    }
-
-    [Fact]
-    public void Build_with_missing_dependency_from_unnamed_fragment_returns_1_and_no_output()
-    {
-        var src = Path.Combine(_tempOut, "unnamed-missing-src");
-        Directory.CreateDirectory(src);
-        File.WriteAllText(Path.Combine(src, "recipes.frag.xml"),
-            """
-            <modlet>
-              <fragment target="recipes" requires="missing.items.base">
-                <append xpath="/recipes"><recipe name="testItem" count="1"/></append>
-              </fragment>
-            </modlet>
-            """);
-
-        var outDir = Path.Combine(_tempOut, "unnamed-missing-out");
-        var exitCode = SampleTestHelper.RunBuildSuppressed(
-            ["build", "--src", src, "--out", outDir, "--verbosity", "none"]);
-
-        Assert.Equal(1, exitCode);
-        Assert.False(Directory.Exists(Path.Combine(outDir, "Config")));
-    }
-
-    [Fact]
-    public void Build_with_no_fragments_found_returns_1()
-    {
-        // Directory with no .frag.xml files produces "no fragments found" error.
-        var emptyDir = Path.Combine(_tempOut, "empty-src");
-        Directory.CreateDirectory(emptyDir);
-
-        var exitCode = SampleTestHelper.RunBuildSuppressed(
-            ["build", "--src", emptyDir, "--out", Path.Combine(_tempOut, "out"), "--verbosity", "none"]);
-
-        Assert.Equal(1, exitCode);
+        SampleTestHelper.ExecuteYamlCase(testCase, _tempRoot);
     }
 
     // ── CLI argument errors (exit code 64) ───────────────────────────────────
@@ -244,10 +46,8 @@ public sealed class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void Unknown_option_returns_64()
     {
-        var src = Path.Combine(_repoRoot, "samples", "real", "alloy-motor-tool-parts", "src");
-
         var exitCode = SampleTestHelper.RunBuildSuppressed(
-            ["build", "--src", src, "--out", _tempOut, "--not-a-real-flag"]);
+            ["build", "--src", "dummy.frag.xml", "--out", "out", "--not-a-real-flag"]);
 
         Assert.Equal(64, exitCode);
     }
@@ -256,7 +56,7 @@ public sealed class CommandLineIntegrationTests : IDisposable
     public void Missing_src_returns_64()
     {
         var exitCode = SampleTestHelper.RunBuildSuppressed(
-            ["build", "--out", _tempOut]);
+            ["build", "--out", "out"]);
 
         Assert.Equal(64, exitCode);
     }
@@ -264,10 +64,8 @@ public sealed class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void Missing_out_returns_64()
     {
-        var src = Path.Combine(_repoRoot, "samples", "real", "alloy-motor-tool-parts", "src");
-
         var exitCode = SampleTestHelper.RunBuildSuppressed(
-            ["build", "--src", src]);
+            ["build", "--src", "dummy.frag.xml"]);
 
         Assert.Equal(64, exitCode);
     }

@@ -7,6 +7,7 @@ The samples are used both as documentation and as test fixtures for verifying de
 
 ```text
 samples/
+├── tests.yaml                — YAML registry of sample-driven golden and integration test cases
 ├── real/                    — working mod excerpts compiled from real Nexus-published mods
 │   ├── alloy-motor-tool-parts/
 │   │   ├── src/             — *.frag.xml source documents
@@ -38,10 +39,35 @@ against the corresponding `src/` directory and is kept in sync with the tool.
 The golden tests in `SampleGoldenTests.cs` verify that re-building always produces
 identical output.
 
+The sample-driven integration and golden tests are defined centrally in
+`samples/tests.yaml`. That YAML file stores the English-only test name,
+description, command parameters, source paths, output paths, expected result path,
+and file-system assertions for every sample-driven case.
+
 Fragment `name` is used only as a public reference target for `requires`. These
 samples omit `name` on fragments that no other fragment references. Every fragment
 still receives an internal deterministic source-location id during the build; that
 id is not written in source XML and cannot be used in `requires`.
+
+## YAML test registry
+
+`samples/tests.yaml` is the single source of truth for sample-driven test data.
+The C# test classes load that YAML file and execute the listed cases as xUnit
+theories instead of keeping per-case paths and command-line arguments hardcoded in
+test methods.
+
+Path values in the YAML file follow these rules:
+
+- Repository fixtures use repo-relative paths such as `samples/real/...`.
+- Temporary paths use tokens such as `{tempSrc}` and `{tempOut}`.
+- Expected golden output directories are referenced through `expected_result_path`.
+
+The current schema includes these top-level concepts for each test case:
+
+- `id`, `name`, `description`, `category`
+- `command` with `sources`, `output`, flags, and verbosity
+- optional `inline_setup_files`, `pre_setup_files`, and `setup_directories`
+- `expected` with exit code, assertion mode, expected result path, and file-system checks
 
 ### alloy-motor-tool-parts
 

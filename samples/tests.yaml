@@ -1,0 +1,327 @@
+tests:
+  # Golden sample cases
+  - id: alloy-motor-tool-parts-golden
+    name: Alloy Motor Tool Parts Golden Match
+    description: Build the Alloy Motor Tool Parts sample and compare the output with the checked-in expected files.
+    category: golden
+    command:
+      verb: build
+      sources:
+        - samples/real/alloy-motor-tool-parts/src
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 0
+      assertion_mode: golden
+      expected_result_path: samples/real/alloy-motor-tool-parts/expected
+      config_created: true
+
+  - id: epic-cash-golden
+    name: Epic Cash Golden Match
+    description: Build the Epic Cash sample and compare the output with the checked-in expected files.
+    category: golden
+    command:
+      verb: build
+      sources:
+        - samples/real/epic-cash/src
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 0
+      assertion_mode: golden
+      expected_result_path: samples/real/epic-cash/expected
+      config_created: true
+
+  - id: project-z-cash-golden
+    name: Project Z Cash Golden Match
+    description: Build the Project Z Cash sample and compare the output with the checked-in expected files.
+    category: golden
+    command:
+      verb: build
+      sources:
+        - samples/real/project-z-cash/src
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 0
+      assertion_mode: golden
+      expected_result_path: samples/real/project-z-cash/expected
+      config_created: true
+
+  - id: alloy-motor-tool-parts-determinism
+    name: Alloy Motor Tool Parts Deterministic Build
+    description: Build the Alloy Motor Tool Parts sample twice and verify that both outputs are identical.
+    category: golden
+    command:
+      verb: build
+      sources:
+        - samples/real/alloy-motor-tool-parts/src
+      output: "{tempOut}/run-a"
+      repeat_output: "{tempOut}/run-b"
+      verbosity: none
+    expected:
+      exit_code: 0
+      assertion_mode: determinism
+      config_created: true
+
+  - id: epic-cash-recursive-golden
+    name: Epic Cash Recursive Discovery Golden Match
+    description: Build the Epic Cash sample with the recursive flag and compare the output with the checked-in expected files.
+    category: golden
+    command:
+      verb: build
+      sources:
+        - samples/real/epic-cash/src
+      output: "{tempOut}"
+      recursive: true
+      verbosity: none
+    expected:
+      exit_code: 0
+      assertion_mode: golden
+      expected_result_path: samples/real/epic-cash/expected
+      config_created: true
+
+  # File-system-oriented integration cases
+  - id: alloy-successful-build
+    name: Alloy Sample Successful Build
+    description: Build the Alloy sample and verify that the Config directory and items file are created.
+    category: integration
+    command:
+      verb: build
+      sources:
+        - samples/real/alloy-motor-tool-parts/src
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 0
+      assertion_mode: file-system
+      config_created: true
+      existing_paths:
+        - Config/items.xml
+
+  - id: alloy-dry-run-no-output
+    name: Alloy Sample Dry Run
+    description: Build the Alloy sample with dry-run and verify that no Config directory is created.
+    category: integration
+    command:
+      verb: build
+      sources:
+        - samples/real/alloy-motor-tool-parts/src
+      output: "{tempOut}"
+      dry_run: true
+      verbosity: none
+    expected:
+      exit_code: 0
+      assertion_mode: file-system
+      config_created: false
+
+  - id: alloy-clean-removes-stale-file
+    name: Alloy Sample Clean Removes Stale File
+    description: Pre-create a stale file in the output directory, run build with clean, and verify that the stale file is removed.
+    category: integration
+    command:
+      verb: build
+      sources:
+        - samples/real/alloy-motor-tool-parts/src
+      output: "{tempOut}"
+      clean: true
+      verbosity: none
+    pre_setup_files:
+      - path: "{tempOut}/Config/stale.xml"
+        content: <stale/>
+    expected:
+      exit_code: 0
+      assertion_mode: file-system
+      config_created: true
+      existing_paths:
+        - Config/items.xml
+      missing_paths:
+        - Config/stale.xml
+
+  - id: unnamed-fragment-build-success
+    name: Unnamed Fragment Build Success
+    description: Create an unnamed fragment in a temporary source directory and verify that it builds successfully.
+    category: integration
+    command:
+      verb: build
+      sources:
+        - "{tempSrc}"
+      output: "{tempOut}/unnamed-out"
+      verbosity: none
+    inline_setup_files:
+      - path: "{tempSrc}/items.frag.xml"
+        content: |
+          <modlet>
+            <fragment target="items">
+              <append xpath="/items"><item name="testItem"/></append>
+            </fragment>
+          </modlet>
+    expected:
+      exit_code: 0
+      assertion_mode: file-system
+      config_created: true
+      existing_paths:
+        - Config/items.xml
+
+  - id: unnamed-fragment-with-requires-build-success
+    name: Unnamed Fragment With Requires Build Success
+    description: Create a named dependency fragment and an unnamed fragment that requires it, then verify that both output files are created.
+    category: integration
+    command:
+      verb: build
+      sources:
+        - "{tempSrc}"
+      output: "{tempOut}/unnamed-requires-out"
+      verbosity: none
+    inline_setup_files:
+      - path: "{tempSrc}/items.frag.xml"
+        content: |
+          <modlet>
+            <fragment name="test.items.base" target="items">
+              <append xpath="/items"><item name="testItem"/></append>
+            </fragment>
+          </modlet>
+      - path: "{tempSrc}/recipes.frag.xml"
+        content: |
+          <modlet>
+            <fragment target="recipes" requires="test.items.base">
+              <append xpath="/recipes"><recipe name="testItem" count="1"/></append>
+            </fragment>
+          </modlet>
+    expected:
+      exit_code: 0
+      assertion_mode: file-system
+      config_created: true
+      existing_paths:
+        - Config/items.xml
+        - Config/recipes.xml
+
+  - id: invalid-missing-dependency
+    name: Missing Dependency Returns Error
+    description: Build the invalid missing-dependency fixture and verify that no Config directory is created.
+    category: integration
+    command:
+      verb: build
+      sources:
+        - samples/invalid/missing-dependency.frag.xml
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 1
+      assertion_mode: file-system
+      config_created: false
+
+  - id: invalid-duplicate-names
+    name: Duplicate Names Return Error
+    description: Build the invalid duplicate-names fixture and verify that no Config directory is created.
+    category: integration
+    command:
+      verb: build
+      sources:
+        - samples/invalid/duplicate-names.frag.xml
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 1
+      assertion_mode: file-system
+      config_created: false
+
+  - id: invalid-cycle
+    name: Dependency Cycle Returns Error
+    description: Build the invalid cycle fixture and verify that no Config directory is created.
+    category: integration
+    command:
+      verb: build
+      sources:
+        - samples/invalid/cycle.frag.xml
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 1
+      assertion_mode: file-system
+      config_created: false
+
+  - id: invalid-unknown-target
+    name: Unknown Target Returns Error
+    description: Build the invalid unknown-target fixture and verify that no Config directory is created.
+    category: integration
+    command:
+      verb: build
+      sources:
+        - samples/invalid/unknown-target.frag.xml
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 1
+      assertion_mode: file-system
+      config_created: false
+
+  - id: invalid-hint-attribute
+    name: Hint Attribute Returns Error
+    description: Build the invalid hint-attribute fixture and verify that no Config directory is created.
+    category: integration
+    command:
+      verb: build
+      sources:
+        - samples/invalid/hint-attribute.frag.xml
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 1
+      assertion_mode: file-system
+      config_created: false
+
+  - id: invalid-malformed-xml
+    name: Malformed XML Returns Error
+    description: Build the invalid malformed fixture and verify that no Config directory is created.
+    category: integration
+    command:
+      verb: build
+      sources:
+        - samples/invalid/malformed.frag.xml
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 1
+      assertion_mode: file-system
+      config_created: false
+
+  - id: unnamed-fragment-missing-dependency-error
+    name: Unnamed Fragment Missing Dependency Returns Error
+    description: Create an unnamed fragment that requires a missing public name and verify that the build fails without output.
+    category: integration
+    command:
+      verb: build
+      sources:
+        - "{tempSrc}"
+      output: "{tempOut}/unnamed-missing-out"
+      verbosity: none
+    inline_setup_files:
+      - path: "{tempSrc}/recipes.frag.xml"
+        content: |
+          <modlet>
+            <fragment target="recipes" requires="missing.items.base">
+              <append xpath="/recipes"><recipe name="testItem" count="1"/></append>
+            </fragment>
+          </modlet>
+    expected:
+      exit_code: 1
+      assertion_mode: file-system
+      config_created: false
+
+  - id: no-fragments-found-error
+    name: No Fragments Found Returns Error
+    description: Point the build command at an empty source directory and verify that no Config directory is created.
+    category: integration
+    setup_directories:
+      - "{tempSrc}/empty-src"
+    command:
+      verb: build
+      sources:
+        - "{tempSrc}/empty-src"
+      output: "{tempOut}/empty-out"
+      verbosity: none
+    expected:
+      exit_code: 1
+      assertion_mode: file-system
+      config_created: false
