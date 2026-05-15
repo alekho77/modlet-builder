@@ -27,12 +27,13 @@ public class OutputGeneratorTests : IDisposable
     [Fact]
     public void Generates_config_file_with_correct_structure()
     {
-        var build = Build("mymod", Frag("a", "items", "<append xpath=\"/items\"><item name=\"x\"/></append>"));
-        var diagnostics = OutputGenerator.Generate([build], _tempDir, dryRun: false, clean: false, _nullLogger);
+        var diagnostics = OutputGenerator.Generate(
+            [Frag("a", "items", "<append xpath=\"/items\"><item name=\"x\"/></append>")],
+            _tempDir, dryRun: false, clean: false, _nullLogger);
 
         Assert.Empty(diagnostics);
 
-        var outputFile = Path.Combine(_tempDir, "mymod", "Config", "items.xml");
+        var outputFile = Path.Combine(_tempDir, "Config", "items.xml");
         Assert.True(File.Exists(outputFile));
 
         var doc = XDocument.Load(outputFile);
@@ -43,10 +44,11 @@ public class OutputGeneratorTests : IDisposable
     [Fact]
     public void Output_file_starts_with_xml_declaration_with_uppercase_encoding()
     {
-        var build = Build("mymod", Frag("a", "items", "<append/>"));
-        OutputGenerator.Generate([build], _tempDir, dryRun: false, clean: false, _nullLogger);
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            _tempDir, dryRun: false, clean: false, _nullLogger);
 
-        var outputFile = Path.Combine(_tempDir, "mymod", "Config", "items.xml");
+        var outputFile = Path.Combine(_tempDir, "Config", "items.xml");
         var rawBytes = File.ReadAllBytes(outputFile);
         var firstLine = Encoding.UTF8.GetString(rawBytes, 0, Math.Min(rawBytes.Length, 60));
 
@@ -56,10 +58,11 @@ public class OutputGeneratorTests : IDisposable
     [Fact]
     public void Output_file_has_no_byte_order_mark()
     {
-        var build = Build("mymod", Frag("a", "items", "<append/>"));
-        OutputGenerator.Generate([build], _tempDir, dryRun: false, clean: false, _nullLogger);
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            _tempDir, dryRun: false, clean: false, _nullLogger);
 
-        var outputFile = Path.Combine(_tempDir, "mymod", "Config", "items.xml");
+        var outputFile = Path.Combine(_tempDir, "Config", "items.xml");
         var rawBytes = File.ReadAllBytes(outputFile);
 
         // UTF-8 BOM is EF BB BF
@@ -71,13 +74,11 @@ public class OutputGeneratorTests : IDisposable
     [Fact]
     public void Fragments_for_same_target_are_merged_in_order()
     {
-        var build = Build("mymod",
-            Frag("a", "items", "<append id=\"1\"/>"),
-            Frag("b", "items", "<append id=\"2\"/>"));
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append id=\"1\"/>"), Frag("b", "items", "<append id=\"2\"/>")],
+            _tempDir, dryRun: false, clean: false, _nullLogger);
 
-        OutputGenerator.Generate([build], _tempDir, dryRun: false, clean: false, _nullLogger);
-
-        var doc = XDocument.Load(Path.Combine(_tempDir, "mymod", "Config", "items.xml"));
+        var doc = XDocument.Load(Path.Combine(_tempDir, "Config", "items.xml"));
         var appends = doc.Root!.Elements("append").ToList();
         Assert.Equal(2, appends.Count);
         Assert.Equal("1", appends[0].Attribute("id")?.Value);
@@ -87,57 +88,43 @@ public class OutputGeneratorTests : IDisposable
     [Fact]
     public void Multiple_targets_produce_separate_files()
     {
-        var build = Build("mymod",
-            Frag("a", "items", "<append/>"),
-            Frag("b", "recipes", "<append/>"));
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>"), Frag("b", "recipes", "<append/>")],
+            _tempDir, dryRun: false, clean: false, _nullLogger);
 
-        OutputGenerator.Generate([build], _tempDir, dryRun: false, clean: false, _nullLogger);
-
-        Assert.True(File.Exists(Path.Combine(_tempDir, "mymod", "Config", "items.xml")));
-        Assert.True(File.Exists(Path.Combine(_tempDir, "mymod", "Config", "recipes.xml")));
-    }
-
-    [Fact]
-    public void Multiple_mods_produce_separate_mod_directories()
-    {
-        var modA = Build("ModA", Frag("a", "items", "<append/>"));
-        var modB = Build("ModB", Frag("b", "recipes", "<append/>"));
-
-        OutputGenerator.Generate([modA, modB], _tempDir, dryRun: false, clean: false, _nullLogger);
-
-        Assert.True(File.Exists(Path.Combine(_tempDir, "ModA", "Config", "items.xml")));
-        Assert.True(File.Exists(Path.Combine(_tempDir, "ModB", "Config", "recipes.xml")));
+        Assert.True(File.Exists(Path.Combine(_tempDir, "Config", "items.xml")));
+        Assert.True(File.Exists(Path.Combine(_tempDir, "Config", "recipes.xml")));
     }
 
     [Fact]
     public void XUi_target_produces_file_in_subdirectory()
     {
-        var build = Build("mymod", Frag("a", "xui_windows", "<window name=\"x\"/>"));
+        OutputGenerator.Generate(
+            [Frag("a", "xui_windows", "<window name=\"x\"/>")],
+            _tempDir, dryRun: false, clean: false, _nullLogger);
 
-        OutputGenerator.Generate([build], _tempDir, dryRun: false, clean: false, _nullLogger);
-
-        var expected = Path.Combine(_tempDir, "mymod", "Config", "XUi", "windows.xml");
+        var expected = Path.Combine(_tempDir, "Config", "XUi", "windows.xml");
         Assert.True(File.Exists(expected));
     }
 
     [Fact]
     public void Dry_run_does_not_write_any_files()
     {
-        var build = Build("mymod", Frag("a", "items", "<append/>"));
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            _tempDir, dryRun: true, clean: false, _nullLogger);
 
-        OutputGenerator.Generate([build], _tempDir, dryRun: true, clean: false, _nullLogger);
-
-        var modDir = Path.Combine(_tempDir, "mymod");
-        Assert.False(Directory.Exists(modDir));
+        Assert.False(Directory.Exists(Path.Combine(_tempDir, "Config")));
     }
 
     [Fact]
     public void Dry_run_with_nonexistent_output_dir_produces_no_errors()
     {
         var missing = Path.Combine(_tempDir, "does_not_exist");
-        var build = Build("mymod", Frag("a", "items", "<append/>"));
 
-        var diagnostics = OutputGenerator.Generate([build], missing, dryRun: true, clean: false, _nullLogger);
+        var diagnostics = OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            missing, dryRun: true, clean: false, _nullLogger);
 
         // Dry run must never fail due to a missing output directory — it should only warn.
         Assert.DoesNotContain(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
@@ -148,56 +135,50 @@ public class OutputGeneratorTests : IDisposable
     public void Dry_run_does_not_create_the_output_directory()
     {
         var missing = Path.Combine(_tempDir, "would_be_created");
-        var build = Build("mymod", Frag("a", "items", "<append/>"));
 
-        OutputGenerator.Generate([build], missing, dryRun: true, clean: false, _nullLogger);
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            missing, dryRun: true, clean: false, _nullLogger);
 
         Assert.False(Directory.Exists(missing));
     }
 
     [Fact]
-    public void Mod_directory_is_created_automatically()
+    public void Config_directory_is_created_automatically()
     {
-        var build = Build("mymod", Frag("a", "items", "<append/>"));
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            _tempDir, dryRun: false, clean: false, _nullLogger);
 
-        OutputGenerator.Generate([build], _tempDir, dryRun: false, clean: false, _nullLogger);
-
-        Assert.True(Directory.Exists(Path.Combine(_tempDir, "mymod", "Config")));
+        Assert.True(Directory.Exists(Path.Combine(_tempDir, "Config")));
     }
 
     [Fact]
     public void Clean_deletes_existing_output_directory_before_building()
     {
         // Pre-populate a file that should not survive clean.
-        var staleDir = Path.Combine(_tempDir, "OldMod");
-        Directory.CreateDirectory(staleDir);
-        File.WriteAllText(Path.Combine(staleDir, "stale.txt"), "old");
+        File.WriteAllText(Path.Combine(_tempDir, "stale.txt"), "old");
 
-        var build = Build("NewMod", Frag("a", "items", "<append/>"));
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            _tempDir, dryRun: false, clean: true, _nullLogger);
 
-        OutputGenerator.Generate([build], _tempDir, dryRun: false, clean: true, _nullLogger);
-
-        Assert.False(File.Exists(Path.Combine(staleDir, "stale.txt")), "Stale file must be removed by --clean.");
-        Assert.True(File.Exists(Path.Combine(_tempDir, "NewMod", "Config", "items.xml")));
+        Assert.False(File.Exists(Path.Combine(_tempDir, "stale.txt")), "Stale file must be removed by --clean.");
+        Assert.True(File.Exists(Path.Combine(_tempDir, "Config", "items.xml")));
     }
 
     [Fact]
     public void Clean_with_dry_run_does_not_delete_anything()
     {
-        var staleDir = Path.Combine(_tempDir, "OldMod");
-        Directory.CreateDirectory(staleDir);
-        File.WriteAllText(Path.Combine(staleDir, "stale.txt"), "old");
+        File.WriteAllText(Path.Combine(_tempDir, "stale.txt"), "old");
 
-        var build = Build("NewMod", Frag("a", "items", "<append/>"));
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            _tempDir, dryRun: true, clean: true, _nullLogger);
 
-        OutputGenerator.Generate([build], _tempDir, dryRun: true, clean: true, _nullLogger);
-
-        Assert.True(File.Exists(Path.Combine(staleDir, "stale.txt")),
+        Assert.True(File.Exists(Path.Combine(_tempDir, "stale.txt")),
             "Dry run with --clean must not delete files.");
     }
-
-    private static ModBuild Build(string modName, params Fragment[] fragments) =>
-        new(modName, fragments);
 
     private static Fragment Frag(string name, string target, string bodyXml = "<append/>") =>
         new(name, target, [], $"{name}.frag.xml", [XElement.Parse(bodyXml)]);

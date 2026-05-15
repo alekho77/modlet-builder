@@ -5,6 +5,5 @@ internal sealed record BuildOptions(
     string OutputDir,
     bool Recursive,
     bool DryRun,
-    string[] Targets,
     bool Clean,
     VerbosityLevel Verbosity);

@@ -11,7 +11,6 @@ internal static class BuildCommand
         string? outputDir = null;
         bool recursive = false;
         bool dryRun = false;
-        var targets = new List<string>();
         bool clean = false;
         var verbosity = VerbosityLevel.Information;
 
@@ -45,20 +44,6 @@ internal static class BuildCommand
                     }
                     outputDir = args[i];
                     i++;
-                    continue;
-
-                case "--targets":
-                    i++;
-                    if (i >= args.Length || args[i].StartsWith("--", StringComparison.Ordinal))
-                    {
-                        errors.Add("Option '--targets' requires at least one mod name argument.");
-                        break;
-                    }
-                    while (i < args.Length && !args[i].StartsWith("--", StringComparison.Ordinal))
-                    {
-                        targets.Add(args[i]);
-                        i++;
-                    }
                     continue;
 
                 case "--recursive":
@@ -109,7 +94,6 @@ internal static class BuildCommand
             outputDir!,
             recursive,
             dryRun,
-            targets.ToArray(),
             clean,
             verbosity), errors);
     }

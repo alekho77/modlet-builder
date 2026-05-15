@@ -288,10 +288,10 @@ public class FragmentParserTests : IDisposable
         Assert.Contains(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
     }
 
-    // ── hint parsing ─────────────────────────────────────────────────────────
+    // ── unknown attribute diagnostics ──────────────────────────────────────────
 
     [Fact]
-    public void Fragment_with_hint_attribute_has_raw_hints_set()
+    public void Fragment_with_hint_attribute_produces_error()
     {
         var file = Write(@"
 <modlet>
@@ -300,46 +300,13 @@ public class FragmentParserTests : IDisposable
 
         var (fragments, diagnostics) = FragmentParser.Parse(file);
 
-        Assert.Empty(diagnostics);
-        Assert.Single(fragments);
-        var hints = fragments[0].RawHints;
-        Assert.NotNull(hints);
-        Assert.Equal(["ModA"], hints);
+        Assert.Empty(fragments);
+        Assert.Contains(diagnostics, d =>
+            d.Severity == DiagnosticSeverity.Error && d.Message.Contains("hint"));
     }
 
     [Fact]
-    public void Fragment_hint_supports_multiple_mod_names()
-    {
-        var file = Write(@"
-<modlet>
-  <fragment name=""mymod.items"" target=""items"" hint=""ModA, ModB, ModC""><append/></fragment>
-</modlet>");
-
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
-
-        Assert.Empty(diagnostics);
-        var hints = fragments[0].RawHints;
-        Assert.NotNull(hints);
-        Assert.Equal(["ModA", "ModB", "ModC"], hints);
-    }
-
-    [Fact]
-    public void Fragment_without_hint_has_null_raw_hints_when_modlet_has_no_hint()
-    {
-        var file = Write(@"
-<modlet>
-  <fragment name=""mymod.items"" target=""items""><append/></fragment>
-</modlet>");
-
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
-
-        Assert.Empty(diagnostics);
-        Assert.Single(fragments);
-        Assert.Null(fragments[0].RawHints);
-    }
-
-    [Fact]
-    public void Modlet_hint_is_inherited_by_fragment_with_no_own_hint()
+    public void Modlet_with_hint_attribute_produces_error()
     {
         var file = Write(@"
 <modlet hint=""SharedMod"">
@@ -348,82 +315,20 @@ public class FragmentParserTests : IDisposable
 
         var (fragments, diagnostics) = FragmentParser.Parse(file);
 
-        Assert.Empty(diagnostics);
-        Assert.Single(fragments);
-        var hints = fragments[0].RawHints;
-        Assert.NotNull(hints);
-        Assert.Equal(["SharedMod"], hints);
+        Assert.Contains(diagnostics, d =>
+            d.Severity == DiagnosticSeverity.Error && d.Message.Contains("hint"));
     }
 
     [Fact]
-    public void Fragment_hint_overrides_modlet_hint()
+    public void Unknown_attribute_on_fragment_produces_error()
     {
-        var file = Write(@"
-<modlet hint=""DefaultMod"">
-  <fragment name=""mymod.items"" target=""items"" hint=""OverrideMod""><append/></fragment>
-</modlet>");
+        var file = Write(@"<modlet><fragment name=""mymod.items"" target=""items"" unknown=""value""><append/></fragment></modlet>");
 
         var (fragments, diagnostics) = FragmentParser.Parse(file);
 
-        Assert.Empty(diagnostics);
-        Assert.Single(fragments);
-        var hints = fragments[0].RawHints;
-        Assert.NotNull(hints);
-        Assert.Equal(["OverrideMod"], hints);
-    }
-
-    [Fact]
-    public void Modlet_hint_applies_only_to_fragments_without_own_hint()
-    {
-        var file = Write(@"
-<modlet hint=""DefaultMod"">
-  <fragment name=""mymod.items"" target=""items""><append/></fragment>
-  <fragment name=""mymod.recipes"" target=""recipes"" hint=""OtherMod""><append/></fragment>
-</modlet>");
-
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
-
-        Assert.Empty(diagnostics);
-        Assert.Equal(2, fragments.Count);
-        var hints0 = fragments[0].RawHints;
-        var hints1 = fragments[1].RawHints;
-        Assert.NotNull(hints0);
-        Assert.NotNull(hints1);
-        Assert.Equal(["DefaultMod"], hints0);
-        Assert.Equal(["OtherMod"],   hints1);
-    }
-
-    [Fact]
-    public void Modlet_hint_supports_multiple_mod_names()
-    {
-        var file = Write(@"
-<modlet hint=""ModA, ModB"">
-  <fragment name=""mymod.items"" target=""items""><append/></fragment>
-</modlet>");
-
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
-
-        Assert.Empty(diagnostics);
-        var hints = fragments[0].RawHints;
-        Assert.NotNull(hints);
-        Assert.Equal(["ModA", "ModB"], hints);
-    }
-
-    [Fact]
-    public void Empty_hint_attribute_on_fragment_falls_back_to_modlet_hint()
-    {
-        var file = Write(@"
-<modlet hint=""DefaultMod"">
-  <fragment name=""mymod.items"" target=""items"" hint=""""><append/></fragment>
-</modlet>");
-
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
-
-        Assert.Empty(diagnostics);
-        // Empty hint is treated as absent; modlet hint applies.
-        var hints = fragments[0].RawHints;
-        Assert.NotNull(hints);
-        Assert.Equal(["DefaultMod"], hints);
+        Assert.Empty(fragments);
+        Assert.Contains(diagnostics, d =>
+            d.Severity == DiagnosticSeverity.Error && d.Message.Contains("unknown"));
     }
 
     private string Write(string xml)

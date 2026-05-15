@@ -10,57 +10,54 @@ namespace ModletBuilder.Core.Generation;
 internal static class OutputGenerator
 {
     internal static IReadOnlyList<Diagnostic> Generate(
-        IReadOnlyList<ModBuild> modBuilds,
-        string modsDir,
+        IReadOnlyList<Fragment> fragments,
+        string outDir,
         bool dryRun,
         bool clean,
         BuildLogger logger)
     {
         var diagnostics = new List<Diagnostic>();
 
-        logger.Information($"Stage 3: Generating output{(dryRun ? " [DRY RUN — no files will be written]" : "")}...");
+        logger.Information($"Stage 2: Generating output{(dryRun ? " [DRY RUN — no files will be written]" : "")}...");
 
         if (dryRun)
         {
-            ReportDryRun(modBuilds, modsDir, clean, logger);
+            ReportDryRun(fragments, outDir, clean, logger);
             return diagnostics;
         }
 
         // ── Real build ────────────────────────────────────────────────────────────
 
-        if (clean && Directory.Exists(modsDir))
+        if (clean && Directory.Exists(outDir))
         {
-            logger.Information($"Cleaning output directory '{modsDir}'...");
+            logger.Information($"Cleaning output directory '{outDir}'...");
             try
             {
-                Directory.Delete(modsDir, recursive: true);
+                Directory.Delete(outDir, recursive: true);
             }
             catch (Exception ex)
             {
                 diagnostics.Add(new Diagnostic(
                     DiagnosticSeverity.Error,
-                    $"Failed to clean output directory '{modsDir}': {ex.Message}"));
+                    $"Failed to clean output directory '{outDir}': {ex.Message}"));
                 return diagnostics;
             }
         }
 
         try
         {
-            Directory.CreateDirectory(modsDir);
+            Directory.CreateDirectory(outDir);
         }
         catch (Exception ex)
         {
             diagnostics.Add(new Diagnostic(
                 DiagnosticSeverity.Error,
-                $"Could not create output directory '{modsDir}': {ex.Message}"));
+                $"Could not create output directory '{outDir}': {ex.Message}"));
             return diagnostics;
         }
 
-        foreach (var modBuild in modBuilds)
-        {
-            var modDiagnostics = GenerateMod(modBuild, modsDir, logger);
-            diagnostics.AddRange(modDiagnostics);
-        }
+        var generateDiagnostics = GenerateOutput(fragments, outDir, logger);
+        diagnostics.AddRange(generateDiagnostics);
 
         return diagnostics;
     }
@@ -68,65 +65,47 @@ internal static class OutputGenerator
     // ── Dry-run reporting (no filesystem access) ──────────────────────────────
 
     private static void ReportDryRun(
-        IReadOnlyList<ModBuild> modBuilds,
-        string modsDir,
+        IReadOnlyList<Fragment> fragments,
+        string outDir,
         bool clean,
         BuildLogger logger)
     {
-        if (!Directory.Exists(modsDir))
+        if (!Directory.Exists(outDir))
         {
             logger.Warning(
-                $"[DRY RUN] Output directory '{modsDir}' does not exist and would be created on a real build.");
+                $"[DRY RUN] Output directory '{outDir}' does not exist and would be created on a real build.");
         }
         else if (clean)
         {
             logger.Information(
-                $"[DRY RUN] --clean would delete all contents of '{modsDir}' before building.");
-        }
-        else
-        {
-            var existingMods = modBuilds
-                .Select(m => m.ModName)
-                .Where(name => Directory.Exists(Path.Combine(modsDir, name)))
-                .ToList();
-
-            if (existingMods.Count > 0)
-            {
-                logger.Information(
-                    $"[DRY RUN] The following mod directories would be overwritten in '{modsDir}': " +
-                    string.Join(", ", existingMods) + ".");
-            }
+                $"[DRY RUN] --clean would delete '{outDir}' before building.");
         }
 
-        foreach (var modBuild in modBuilds)
-        {
-            var configFiles = modBuild.OrderedFragments
-                .Select(f => f.Target)
-                .Distinct()
-                .Select(target => KnownTargets.GetFilePath(target))
-                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+        var configFiles = fragments
+            .Select(f => f.Target)
+            .Distinct()
+            .Select(target => KnownTargets.GetFilePath(target))
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-            logger.Information(
-                $"[DRY RUN] Mod '{modBuild.ModName}': {modBuild.OrderedFragments.Count} fragment(s) " +
-                $"→ {configFiles.Count} config file(s): " +
-                string.Join(", ", configFiles.Select(f => $"Config/{f}")) + ".");
-        }
+        logger.Information(
+            $"[DRY RUN] {fragments.Count} fragment(s) → {configFiles.Count} config file(s): " +
+            string.Join(", ", configFiles.Select(f => $"Config/{f}")) + ".");
     }
 
-    // ── Real mod output ───────────────────────────────────────────────────────
+    // ── Real output ───────────────────────────────────────────────────────────
 
-    private static IReadOnlyList<Diagnostic> GenerateMod(
-        ModBuild modBuild,
-        string modsDir,
+    private static IReadOnlyList<Diagnostic> GenerateOutput(
+        IReadOnlyList<Fragment> fragments,
+        string outDir,
         BuildLogger logger)
     {
         var diagnostics = new List<Diagnostic>();
-        var configDir = Path.Combine(modsDir, modBuild.ModName, "Config");
+        var configDir = Path.Combine(outDir, "Config");
 
         // Group fragments by target, preserving the resolved order within each group.
         var byTarget = new Dictionary<string, List<Fragment>>(StringComparer.Ordinal);
-        foreach (var fragment in modBuild.OrderedFragments)
+        foreach (var fragment in fragments)
         {
             if (!byTarget.TryGetValue(fragment.Target, out var list))
             {
@@ -168,8 +147,7 @@ internal static class OutputGenerator
         }
 
         logger.Information(
-            $"Mod '{modBuild.ModName}': {modBuild.OrderedFragments.Count} fragment(s) → " +
-            $"{byTarget.Count} config file(s).");
+            $"{fragments.Count} fragment(s) → {byTarget.Count} config file(s).");
 
         return diagnostics;
     }

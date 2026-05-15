@@ -16,7 +16,6 @@ public class BuildArgumentParserTests
         Assert.Equal("C:\\Mods\\MyMod", options.OutputDir);
         Assert.False(options.Recursive);
         Assert.False(options.DryRun);
-        Assert.Empty(options.Targets);
         Assert.False(options.Clean);
         Assert.Equal(VerbosityLevel.Information, options.Verbosity);
     }
@@ -55,35 +54,13 @@ public class BuildArgumentParserTests
     }
 
     [Fact]
-    public void Targets_option_collects_multiple_mod_names()
+    public void Targets_option_is_unknown_and_returns_error()
     {
         var (options, errors) = BuildCommand.ParseArgs(
-            ["--src", "src/", "--out", "out", "--targets", "ModA", "ModB", "ModC"]);
-
-        Assert.Empty(errors);
-        Assert.NotNull(options);
-        Assert.Equal(["ModA", "ModB", "ModC"], options.Targets);
-    }
-
-    [Fact]
-    public void Targets_option_with_single_mod_name_is_parsed()
-    {
-        var (options, errors) = BuildCommand.ParseArgs(
-            ["--src", "src/", "--out", "out", "--targets", "MyMod"]);
-
-        Assert.Empty(errors);
-        Assert.NotNull(options);
-        Assert.Equal(["MyMod"], options.Targets);
-    }
-
-    [Fact]
-    public void Targets_without_value_returns_error()
-    {
-        var (options, errors) = BuildCommand.ParseArgs(
-            ["--src", "src/", "--out", "out", "--targets"]);
+            ["--src", "src/", "--out", "out", "--targets", "ModA"]);
 
         Assert.Null(options);
-        Assert.Contains(errors, e => e.Contains("--targets"));
+        Assert.Contains(errors, e => e.Contains("--targets") || e.Contains("targets"));
     }
 
     [Fact]

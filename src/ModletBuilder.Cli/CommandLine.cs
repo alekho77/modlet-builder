@@ -4,7 +4,7 @@ using ModletBuilder.Core.Generation;
 using ModletBuilder.Core.Logging;
 using ModletBuilder.Core.Models;
 using ModletBuilder.Core.Parsing;
-using ModletBuilder.Core.Registry;
+using ModletBuilder.Core.Resolution;
 using ModletBuilder.Core.SourceDiscovery;
 
 internal static class CommandLine
@@ -50,8 +50,8 @@ internal static class CommandLine
                 Console.Error.WriteLine($"error: {error}");
             Console.Error.WriteLine();
             Console.Error.WriteLine(
-                "Usage: modlet-builder build --src <path> [<path> ...] --out <mods-dir> " +
-                "[--targets <mod> ...] [--recursive] [--dry-run] [--clean] [--verbosity <level>]");
+                "Usage: modlet-builder build --src <path> [<path> ...] --out <mod-dir> " +
+                "[--recursive] [--dry-run] [--clean] [--verbosity <level>]");
             return 64;
         }
 
@@ -80,10 +80,15 @@ internal static class CommandLine
             return 1;
         }
 
-        // ── Stage 1–2: Registry and per-mod ordering ──────────────────────────
-        var (modBuilds, registryDiagnostics) = FragmentRegistryBuilder.Build(
-            fragments, options.Targets, logger);
-        allDiagnostics.AddRange(registryDiagnostics);
+        if (fragments.Count == 0)
+        {
+            Console.Error.WriteLine("error: No fragments found in the specified source paths.");
+            return 1;
+        }
+
+        // ── Stage 1: Dependency resolution ────────────────────────────────────
+        var (ordered, resolveDiagnostics) = DependencyResolver.Resolve(fragments);
+        allDiagnostics.AddRange(resolveDiagnostics);
 
         if (HasErrors(allDiagnostics))
         {
@@ -91,9 +96,11 @@ internal static class CommandLine
             return 1;
         }
 
-        // ── Stage 3: Output generation ────────────────────────────────────────
+        logger.Debug($"Resolved order for {ordered.Count} fragment(s).");
+
+        // ── Stage 2: Output generation ────────────────────────────────────────
         var generateDiagnostics = OutputGenerator.Generate(
-            modBuilds, options.OutputDir, options.DryRun, options.Clean, logger);
+            ordered, options.OutputDir, options.DryRun, options.Clean, logger);
         allDiagnostics.AddRange(generateDiagnostics);
 
         EmitDiagnostics(allDiagnostics, logger);
@@ -104,8 +111,7 @@ internal static class CommandLine
         if (options.DryRun)
             logger.Information("Dry run completed. No files were written.");
         else
-            logger.Information(
-                $"Build complete. {modBuilds.Count} mod(s) written to '{options.OutputDir}'.");
+            logger.Information($"Build complete. Output written to '{options.OutputDir}'.");
 
         return 0;
     }
@@ -152,19 +158,17 @@ internal static class CommandLine
         writer.WriteLine("      --version                      Display tool version.");
         writer.WriteLine();
         writer.WriteLine("Commands:");
-        writer.WriteLine("  build                              Assemble fragments into output mod directories.");
+        writer.WriteLine("  build                              Assemble fragments into output mod Config files.");
         writer.WriteLine();
         writer.WriteLine("'build' command options:");
         writer.WriteLine("      --src <path> [<path> ...]  One or more source files or directories");
         writer.WriteLine("                                 containing *.frag.xml files. Required.");
-        writer.WriteLine("      --out <mods-dir>           Output Mods root directory. Required.");
-        writer.WriteLine("                                 Each mod is written to {mods-dir}/{mod-name}/Config/.");
-        writer.WriteLine("      --targets <mod> [<mod> ...]  Build only the specified mods. Also used as");
-        writer.WriteLine("                                 fallback mod assignment for fragments with no hint.");
+        writer.WriteLine("      --out <mod-dir>            Output mod directory. Required.");
+        writer.WriteLine("                                 Config files are written to {mod-dir}/Config/.");
         writer.WriteLine("      --recursive                Scan source directories recursively.");
         writer.WriteLine("      --dry-run                  Validate sources, resolve dependencies, and");
         writer.WriteLine("                                 report what would be built — without writing files.");
-        writer.WriteLine("      --clean                    Delete all contents of --out before building.");
+        writer.WriteLine("      --clean                    Delete the entire --out directory before building.");
         writer.WriteLine("                                 Has no effect with --dry-run.");
         writer.WriteLine("      --verbosity <level>        Log verbosity: debug, information (default),");
         writer.WriteLine("                                 warning, error, none.");
