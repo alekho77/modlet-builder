@@ -3,9 +3,9 @@
     INVALID: unsupported hint attribute.
     The 'hint' attribute was used in an earlier design for multi-mod routing
     but is no longer supported. Use separate --out directories instead.
-    Expected error: Unknown attribute 'hint' on fragment 'invalid.hint'.
+    Expected error: Unknown attribute 'hint' on an unnamed fragment.
   -->
-  <fragment name="invalid.hint" target="items" hint="SomeMod">
+  <fragment target="items" hint="SomeMod">
     <append xpath="/items">
       <item name="testItem"/>
     </append>

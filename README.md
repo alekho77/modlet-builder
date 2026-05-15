@@ -162,7 +162,7 @@ A source document containing two fragments targeting different output files:
     </append>
   </fragment>
 
-  <fragment name="my-mod.recipes.base" target="recipes" requires="my-mod.items.base">
+  <fragment target="recipes" requires="my-mod.items.base">
     <append xpath="/recipes">
       <!-- recipe definitions go here -->
     </append>
@@ -175,11 +175,13 @@ A source document containing two fragments targeting different output files:
 
 | Attribute | Required | Description |
 | --------- | -------- | ----------- |
-| `name` | Yes | Unique identifier for this fragment. Used as a reference target in `requires`. Suggested convention: `{mod}.{target}.{role}`. |
+| `name` | Only when referenced | Public identifier for this fragment. Required only when another fragment needs to reference it in `requires`. Suggested convention: `{mod}.{target}.{role}`. |
 | `target` | Yes | The output config file this fragment contributes to. Must be one of the [known target values](#known-target-values). |
-| `requires` | No | Comma-separated list of `name` values this fragment depends on. The tool places all dependencies before this fragment in the output. |
+| `requires` | No | Comma-separated list of public `name` values this fragment depends on. The tool places all dependencies before this fragment in the resolved output order. |
 
 Build-only metadata (`name`, `target`, `requires`) is stripped from all generated output. Only the child elements of `<fragment>` appear in the final XML.
+
+Fragments that are not referenced by `requires` should omit `name`. The tool still assigns every fragment an internal deterministic source-location id for validation and ordering diagnostics; that internal id is not part of the source format and cannot be used in `requires`.
 
 ### Directory scanning
 
@@ -212,12 +214,12 @@ Given source fragments:
 <!-- src/items.frag.xml -->
 <modlet>
   <fragment name="mymod.items.base" target="items"> ... </fragment>
-  <fragment name="mymod.items.extra" target="items" requires="mymod.items.base"> ... </fragment>
+  <fragment target="items" requires="mymod.items.base"> ... </fragment>
 </modlet>
 
 <!-- src/recipes.frag.xml -->
 <modlet>
-  <fragment name="mymod.recipes" target="recipes" requires="mymod.items.base"> ... </fragment>
+  <fragment target="recipes" requires="mymod.items.base"> ... </fragment>
 </modlet>
 ```
 
@@ -232,8 +234,8 @@ Result:
 ```text
 /path/to/Mods/MyMod/
 └─ Config/
-   ├─ items.xml      — mymod.items.base followed by mymod.items.extra
-   └─ recipes.xml    — mymod.recipes
+  ├─ items.xml      — mymod.items.base followed by the unnamed items fragment
+  └─ recipes.xml    — unnamed recipes fragment
 ```
 
 Each generated file has the following structure:

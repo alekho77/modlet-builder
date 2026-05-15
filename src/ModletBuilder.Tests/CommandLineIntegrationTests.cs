@@ -69,6 +69,59 @@ public sealed class CommandLineIntegrationTests : IDisposable
         Assert.True(File.Exists(Path.Combine(_tempOut, "Config", "items.xml")));
     }
 
+        [Fact]
+        public void Unnamed_fragment_build_returns_0_and_creates_output()
+        {
+                var src = Path.Combine(_tempOut, "unnamed-src");
+                Directory.CreateDirectory(src);
+                File.WriteAllText(Path.Combine(src, "items.frag.xml"),
+                        """
+                        <modlet>
+                            <fragment target="items">
+                                <append xpath="/items"><item name="testItem"/></append>
+                            </fragment>
+                        </modlet>
+                        """);
+
+                var outDir = Path.Combine(_tempOut, "unnamed-out");
+                var exitCode = SampleTestHelper.RunBuildSuppressed(
+                        ["build", "--src", src, "--out", outDir, "--verbosity", "none"]);
+
+                Assert.Equal(0, exitCode);
+                Assert.True(File.Exists(Path.Combine(outDir, "Config", "items.xml")));
+        }
+
+        [Fact]
+        public void Unnamed_fragment_with_requires_builds_when_dependency_is_named()
+        {
+                var src = Path.Combine(_tempOut, "unnamed-requires-src");
+                Directory.CreateDirectory(src);
+                File.WriteAllText(Path.Combine(src, "items.frag.xml"),
+                        """
+                        <modlet>
+                            <fragment name="test.items.base" target="items">
+                                <append xpath="/items"><item name="testItem"/></append>
+                            </fragment>
+                        </modlet>
+                        """);
+                File.WriteAllText(Path.Combine(src, "recipes.frag.xml"),
+                        """
+                        <modlet>
+                            <fragment target="recipes" requires="test.items.base">
+                                <append xpath="/recipes"><recipe name="testItem" count="1"/></append>
+                            </fragment>
+                        </modlet>
+                        """);
+
+                var outDir = Path.Combine(_tempOut, "unnamed-requires-out");
+                var exitCode = SampleTestHelper.RunBuildSuppressed(
+                        ["build", "--src", src, "--out", outDir, "--verbosity", "none"]);
+
+                Assert.Equal(0, exitCode);
+                Assert.True(File.Exists(Path.Combine(outDir, "Config", "items.xml")));
+                Assert.True(File.Exists(Path.Combine(outDir, "Config", "recipes.xml")));
+        }
+
     // ── Negative build scenarios (parse and resolution errors) ───────────────
 
     [Fact]
@@ -141,6 +194,28 @@ public sealed class CommandLineIntegrationTests : IDisposable
 
         Assert.Equal(1, exitCode);
         Assert.False(Directory.Exists(Path.Combine(_tempOut, "Config")));
+    }
+
+    [Fact]
+    public void Build_with_missing_dependency_from_unnamed_fragment_returns_1_and_no_output()
+    {
+        var src = Path.Combine(_tempOut, "unnamed-missing-src");
+        Directory.CreateDirectory(src);
+        File.WriteAllText(Path.Combine(src, "recipes.frag.xml"),
+            """
+            <modlet>
+              <fragment target="recipes" requires="missing.items.base">
+                <append xpath="/recipes"><recipe name="testItem" count="1"/></append>
+              </fragment>
+            </modlet>
+            """);
+
+        var outDir = Path.Combine(_tempOut, "unnamed-missing-out");
+        var exitCode = SampleTestHelper.RunBuildSuppressed(
+            ["build", "--src", src, "--out", outDir, "--verbosity", "none"]);
+
+        Assert.Equal(1, exitCode);
+        Assert.False(Directory.Exists(Path.Combine(outDir, "Config")));
     }
 
     [Fact]

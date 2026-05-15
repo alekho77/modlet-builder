@@ -100,6 +100,8 @@ public class FragmentParserTests : IDisposable
         Assert.Single(fragments);
         var f = fragments[0];
         Assert.Equal("mymod.items.base", f.Name);
+        Assert.Contains(file, f.InternalId);
+        Assert.Contains("#L", f.InternalId);
         Assert.Equal("items", f.Target);
         Assert.Empty(f.Requires);
         Assert.Single(f.Body);
@@ -182,7 +184,7 @@ public class FragmentParserTests : IDisposable
         Assert.Empty(diagnostics);
         Assert.Equal(3, fragments.Count);
         Assert.Equal(["mymod.items.a", "mymod.items.b", "mymod.items.c"],
-            fragments.Select(f => f.Name).ToArray());
+          fragments.Select(f => f.Name!).ToArray());
     }
 
     [Fact]
@@ -236,15 +238,46 @@ public class FragmentParserTests : IDisposable
     // ── Fragment-level validation ─────────────────────────────────────────────
 
     [Fact]
-    public void Missing_name_attribute_produces_error()
+    public void Unnamed_fragment_without_requires_is_parsed_correctly()
     {
         var file = Write(@"<modlet><fragment target=""items""><append/></fragment></modlet>");
 
         var (fragments, diagnostics) = FragmentParser.Parse(file);
 
-        Assert.Empty(fragments);
-        Assert.Contains(diagnostics, d =>
-            d.Severity == DiagnosticSeverity.Error && d.Message.Contains("name"));
+      Assert.Empty(diagnostics);
+      Assert.Single(fragments);
+      Assert.Null(fragments[0].Name);
+      Assert.Contains(file, fragments[0].InternalId);
+      Assert.Contains("#L", fragments[0].InternalId);
+    }
+
+    [Fact]
+    public void Unnamed_fragment_with_requires_is_parsed_correctly()
+    {
+      var file = Write(@"<modlet><fragment target=""recipes"" requires=""mymod.items.base""><append/></fragment></modlet>");
+
+      var (fragments, diagnostics) = FragmentParser.Parse(file);
+
+      Assert.Empty(diagnostics);
+      Assert.Single(fragments);
+      Assert.Null(fragments[0].Name);
+      Assert.Equal(["mymod.items.base"], fragments[0].Requires);
+    }
+
+    [Fact]
+    public void Multiple_unnamed_fragments_get_unique_internal_ids()
+    {
+      var file = Write(@"
+  <modlet>
+    <fragment target=""items""><append id=""1""/></fragment>
+    <fragment target=""items""><append id=""2""/></fragment>
+  </modlet>");
+
+      var (fragments, diagnostics) = FragmentParser.Parse(file);
+
+      Assert.Empty(diagnostics);
+      Assert.Equal(2, fragments.Count);
+      Assert.NotEqual(fragments[0].InternalId, fragments[1].InternalId);
     }
 
     [Fact]
@@ -330,6 +363,21 @@ public class FragmentParserTests : IDisposable
         Assert.Contains(diagnostics, d =>
             d.Severity == DiagnosticSeverity.Error && d.Message.Contains("unknown"));
     }
+
+        [Fact]
+        public void Unknown_attribute_on_unnamed_fragment_reports_internal_id()
+        {
+          var file = Write(@"<modlet><fragment target=""items"" unknown=""value""><append/></fragment></modlet>");
+
+          var (fragments, diagnostics) = FragmentParser.Parse(file);
+
+          Assert.Empty(fragments);
+          Assert.Contains(diagnostics, d =>
+            d.Severity == DiagnosticSeverity.Error
+            && d.Message.Contains("unknown")
+            && d.Message.Contains("unnamed fragment")
+            && d.Message.Contains(file));
+        }
 
     // ── Additional validation edge cases ─────────────────────────────────────
 

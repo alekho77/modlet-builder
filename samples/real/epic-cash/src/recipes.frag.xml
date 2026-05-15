@@ -7,7 +7,7 @@
     station (always_unlocked + packMuleCrafting tag).
     Requires the item definitions to be applied first (ev-epiccash.items.base).
   -->
-  <fragment name="ev-epiccash.recipes.vehicles" target="recipes" requires="ev-epiccash.items.base">
+  <fragment target="recipes" requires="ev-epiccash.items.base">
     <append xpath="/recipes">
       <recipe name="evMotorcycleStarterBundle" count="1" craft_time="2" always_unlocked="true" tags="packMuleCrafting">
         <ingredient name="evCash" count="20"/>

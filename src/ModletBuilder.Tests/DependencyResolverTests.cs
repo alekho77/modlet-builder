@@ -112,15 +112,15 @@ public class DependencyResolverTests
         var (ordered, diagnostics) = DependencyResolver.Resolve([z, a, m]);
 
         Assert.Empty(diagnostics);
-        Assert.Equal(["a", "m", "z"], ordered.Select(f => f.Name).ToArray());
+        Assert.Equal(["a", "m", "z"], ordered.Select(f => f.Name!).ToArray());
     }
 
     [Fact]
     public void Duplicate_name_diagnostic_includes_first_definition_source_file()
     {
         // The diagnostic for a duplicate must reference the source file of the FIRST definition.
-        var first = new Fragment("a", "items", [], "first.frag.xml", []);
-        var second = new Fragment("a", "recipes", [], "second.frag.xml", []);
+        var first = new Fragment("id:first", "a", "items", [], "first.frag.xml", []);
+        var second = new Fragment("id:second", "a", "recipes", [], "second.frag.xml", []);
 
         var (_, diagnostics) = DependencyResolver.Resolve([first, second]);
 
@@ -164,9 +164,89 @@ public class DependencyResolverTests
         var (ordered, diagnostics) = DependencyResolver.Resolve([e, d, c, b, a]);
 
         Assert.Empty(diagnostics);
-        Assert.Equal(["a", "b", "c", "d", "e"], ordered.Select(f => f.Name).ToArray());
+        Assert.Equal(["a", "b", "c", "d", "e"], ordered.Select(f => f.Name!).ToArray());
     }
 
-    private static Fragment Frag(string name, string target, string[]? requires = null) =>
-        new(name, target, requires ?? [], $"{name}.frag.xml", []);
+    [Fact]
+    public void Unnamed_fragment_with_no_dependencies_is_resolved()
+    {
+        var fragment = Frag(null, "items", internalId: "source/items.frag.xml#L1#F0");
+
+        var (ordered, diagnostics) = DependencyResolver.Resolve([fragment]);
+
+        Assert.Empty(diagnostics);
+        Assert.Single(ordered);
+        Assert.Null(ordered[0].Name);
+        Assert.Equal("source/items.frag.xml#L1#F0", ordered[0].InternalId);
+    }
+
+    [Fact]
+    public void Unnamed_fragment_may_require_named_fragment()
+    {
+        var named = Frag("items.base", "items");
+        var unnamed = Frag(null, "recipes", requires: ["items.base"], internalId: "source/recipes.frag.xml#L1#F0");
+
+        var (ordered, diagnostics) = DependencyResolver.Resolve([unnamed, named]);
+
+        Assert.Empty(diagnostics);
+        Assert.Equal("items.base", ordered[0].Name);
+        Assert.Null(ordered[1].Name);
+    }
+
+    [Fact]
+    public void Duplicate_name_detection_ignores_unnamed_fragments()
+    {
+        var unnamedA = Frag(null, "items", internalId: "source/a.frag.xml#L1#F0");
+        var unnamedB = Frag(null, "recipes", internalId: "source/b.frag.xml#L1#F0");
+
+        var (ordered, diagnostics) = DependencyResolver.Resolve([unnamedB, unnamedA]);
+
+        Assert.Empty(diagnostics);
+        Assert.Equal(2, ordered.Count);
+    }
+
+    [Fact]
+    public void Missing_requires_from_unnamed_fragment_reports_internal_id()
+    {
+        var unnamed = Frag(null, "recipes", requires: ["missing"], internalId: "source/recipes.frag.xml#L7#F0");
+
+        var (ordered, diagnostics) = DependencyResolver.Resolve([unnamed]);
+
+        Assert.Empty(ordered);
+        Assert.Contains(diagnostics, d =>
+            d.Severity == DiagnosticSeverity.Error
+            && d.Message.Contains("unnamed fragment")
+            && d.Message.Contains("source/recipes.frag.xml#L7#F0")
+            && d.Message.Contains("missing"));
+    }
+
+    [Fact]
+    public void Independent_mixed_named_and_unnamed_fragments_are_ordered_deterministically()
+    {
+        var unnamedB = Frag(null, "items", internalId: "source/b.frag.xml#L1#F0");
+        var named = Frag("a", "items");
+        var unnamedA = Frag(null, "items", internalId: "source/a.frag.xml#L1#F0");
+
+        var (ordered, diagnostics) = DependencyResolver.Resolve([unnamedB, named, unnamedA]);
+
+        Assert.Empty(diagnostics);
+        Assert.Equal("a", ordered[0].Name);
+        Assert.Null(ordered[1].Name);
+        Assert.Null(ordered[2].Name);
+        Assert.Equal("source/a.frag.xml#L1#F0", ordered[1].InternalId);
+        Assert.Equal("source/b.frag.xml#L1#F0", ordered[2].InternalId);
+    }
+
+    private static Fragment Frag(
+        string? name,
+        string target,
+        string[]? requires = null,
+        string? internalId = null) =>
+        new(
+            internalId ?? $"id:{name}",
+            name,
+            target,
+            requires ?? [],
+            $"{name ?? internalId}.frag.xml",
+            []);
 }

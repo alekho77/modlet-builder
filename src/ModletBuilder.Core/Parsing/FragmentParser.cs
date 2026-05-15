@@ -13,7 +13,7 @@ internal static class FragmentParser
 
         try
         {
-            doc = XDocument.Load(filePath, LoadOptions.PreserveWhitespace);
+            doc = XDocument.Load(filePath, LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo);
         }
         catch (XmlException ex)
         {
@@ -81,9 +81,10 @@ internal static class FragmentParser
         }
 
         var fragments = new List<Fragment>(fragmentElements.Count);
-        foreach (var el in fragmentElements)
+        for (var i = 0; i < fragmentElements.Count; i++)
         {
-            var (fragment, fragDiagnostics) = ParseFragmentElement(el, filePath);
+            var el = fragmentElements[i];
+            var (fragment, fragDiagnostics) = ParseFragmentElement(el, filePath, i);
             diagnostics.AddRange(fragDiagnostics);
             if (fragment is not null)
                 fragments.Add(fragment);
@@ -93,18 +94,12 @@ internal static class FragmentParser
     }
 
     private static (Fragment? Fragment, IReadOnlyList<Diagnostic> Diagnostics) ParseFragmentElement(
-        XElement el, string filePath)
+        XElement el, string filePath, int fragmentOrdinal)
     {
         var diagnostics = new List<Diagnostic>();
 
-        var name = el.Attribute("name")?.Value;
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            diagnostics.Add(new Diagnostic(
-                DiagnosticSeverity.Error,
-                "Fragment is missing required attribute 'name'.",
-                filePath));
-        }
+        var nameAttr = el.Attribute("name")?.Value;
+        var name = string.IsNullOrWhiteSpace(nameAttr) ? null : nameAttr;
 
         var target = el.Attribute("target")?.Value;
         if (string.IsNullOrWhiteSpace(target))
@@ -129,7 +124,7 @@ internal static class FragmentParser
         {
             if (!knownAttribs.Contains(attr.Name.LocalName))
             {
-                var fragLabel = string.IsNullOrWhiteSpace(name) ? "(unnamed fragment)" : $"'{name}'";
+                var fragLabel = DescribeFragment(name, CreateInternalId(el, filePath, fragmentOrdinal));
                 diagnostics.Add(new Diagnostic(
                     DiagnosticSeverity.Error,
                     $"Unknown attribute '{attr.Name.LocalName}' on fragment {fragLabel}. " +
@@ -147,6 +142,17 @@ internal static class FragmentParser
 
         var body = el.Elements().ToList();
 
-        return (new Fragment(name!, target!, requires, filePath, body), diagnostics);
+        var internalId = CreateInternalId(el, filePath, fragmentOrdinal);
+        return (new Fragment(internalId, name, target!, requires, filePath, body), diagnostics);
     }
+
+    private static string CreateInternalId(XElement element, string filePath, int fragmentOrdinal)
+    {
+        var lineInfo = (IXmlLineInfo)element;
+        var lineNumber = lineInfo.HasLineInfo() ? lineInfo.LineNumber : 0;
+        return $"{filePath}#L{lineNumber}#F{fragmentOrdinal}";
+    }
+
+    private static string DescribeFragment(string? name, string internalId) =>
+        name is null ? $"(unnamed fragment at {internalId})" : $"'{name}'";
 }

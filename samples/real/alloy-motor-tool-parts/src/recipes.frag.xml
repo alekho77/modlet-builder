@@ -3,7 +3,7 @@
     Alloy Motor Tool Parts - crafting recipe.
     Source: EV_AlloyMotorToolParts by Aleksei Khozin
   -->
-  <fragment name="ev-alloy.recipes.base" target="recipes">
+  <fragment target="recipes">
     <append xpath="/recipes">
       <recipe name="motorToolPartsA_Alloy" count="1" craft_area="workbench" craft_time="60" tags="toolPartsA_unlock">
         <ingredient name="meleeToolAxeT3ChainsawParts" count="1"/>

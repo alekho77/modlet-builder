@@ -3,7 +3,7 @@
     Alloy Motor Tool Parts - progression unlock.
     Source: EV_AlloyMotorToolParts by Aleksei Khozin
   -->
-  <fragment name="ev-alloy.progression.unlock" target="progression">
+  <fragment target="progression">
     <set xpath="/progression/crafting_skills/crafting_skill[@name='craftingSalvageTools']/@max_level">100</set>
     <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingSalvageTools']/effect_group">
       <passive_effect name="RecipeTagUnlocked" operation="base_set" level="76,100" value="1" tags="toolPartsA_unlock"/>

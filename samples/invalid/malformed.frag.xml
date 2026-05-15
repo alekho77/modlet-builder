@@ -5,5 +5,5 @@
     not well-formed. The parser must reject it with a parse error.
     Expected: XML parse exception, build exit code 1.
   -->
-  <fragment name="invalid.malformed" target="items">
+  <fragment target="items">
     <append xpath="/items"><unclosed></modlet>

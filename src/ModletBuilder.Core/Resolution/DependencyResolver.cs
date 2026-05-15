@@ -9,10 +9,21 @@ internal static class DependencyResolver
     {
         var diagnostics = new List<Diagnostic>();
 
-        // Detect duplicate names
+        var fragmentsById = new Dictionary<string, Fragment>(StringComparer.Ordinal);
         var nameMap = new Dictionary<string, Fragment>(StringComparer.Ordinal);
         foreach (var fragment in fragments)
         {
+            if (!fragmentsById.TryAdd(fragment.InternalId, fragment))
+            {
+                diagnostics.Add(new Diagnostic(
+                    DiagnosticSeverity.Error,
+                    $"Duplicate internal fragment id '{fragment.InternalId}'.",
+                    fragment.SourceFile));
+            }
+
+            if (fragment.Name is null)
+                continue;
+
             if (!nameMap.TryAdd(fragment.Name, fragment))
             {
                 diagnostics.Add(new Diagnostic(
@@ -23,7 +34,6 @@ internal static class DependencyResolver
             }
         }
 
-        // Detect missing requires references
         foreach (var fragment in fragments)
         {
             foreach (var req in fragment.Requires)
@@ -32,7 +42,7 @@ internal static class DependencyResolver
                 {
                     diagnostics.Add(new Diagnostic(
                         DiagnosticSeverity.Error,
-                        $"Fragment '{fragment.Name}' requires '{req}' which is not defined.",
+                        $"Fragment {DescribeFragment(fragment)} requires '{req}' which is not defined.",
                         fragment.SourceFile));
                 }
             }
@@ -41,35 +51,36 @@ internal static class DependencyResolver
         if (diagnostics.Count > 0)
             return (Array.Empty<Fragment>(), diagnostics);
 
-        // Kahn's topological sort
-        // Build in-degree map and adjacency list
         var inDegree = new Dictionary<string, int>(StringComparer.Ordinal);
         var dependents = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 
         foreach (var fragment in fragments)
         {
-            if (!inDegree.ContainsKey(fragment.Name))
-                inDegree[fragment.Name] = 0;
+            if (!inDegree.ContainsKey(fragment.InternalId))
+                inDegree[fragment.InternalId] = 0;
 
-            if (!dependents.ContainsKey(fragment.Name))
-                dependents[fragment.Name] = [];
+            if (!dependents.ContainsKey(fragment.InternalId))
+                dependents[fragment.InternalId] = [];
 
             foreach (var req in fragment.Requires)
             {
-                if (!dependents.ContainsKey(req))
-                    dependents[req] = [];
+                var dependency = nameMap[req];
+                if (!dependents.ContainsKey(dependency.InternalId))
+                    dependents[dependency.InternalId] = [];
 
-                dependents[req].Add(fragment.Name);
-                inDegree[fragment.Name] = inDegree.GetValueOrDefault(fragment.Name, 0) + 1;
+                dependents[dependency.InternalId].Add(fragment.InternalId);
+                inDegree[fragment.InternalId] = inDegree.GetValueOrDefault(fragment.InternalId, 0) + 1;
             }
         }
 
-        // Seed queue with zero-in-degree nodes, sorted by name for determinism
-        var ready = new SortedSet<string>(StringComparer.Ordinal);
-        foreach (var (name, degree) in inDegree)
+        var idComparer = Comparer<string>.Create((left, right) =>
+            CompareFragmentIds(left, right, fragmentsById));
+
+        var ready = new SortedSet<string>(idComparer);
+        foreach (var (id, degree) in inDegree)
         {
             if (degree == 0)
-                ready.Add(name);
+                ready.Add(id);
         }
 
         var ordered = new List<Fragment>(fragments.Count);
@@ -78,9 +89,9 @@ internal static class DependencyResolver
         {
             var current = ready.Min!;
             ready.Remove(current);
-            ordered.Add(nameMap[current]);
+            ordered.Add(fragmentsById[current]);
 
-            foreach (var dependent in dependents[current].OrderBy(n => n, StringComparer.Ordinal))
+            foreach (var dependent in dependents[current].OrderBy(n => n, idComparer))
             {
                 inDegree[dependent]--;
                 if (inDegree[dependent] == 0)
@@ -90,20 +101,48 @@ internal static class DependencyResolver
 
         if (ordered.Count != fragments.Count)
         {
-            // Cycle detected — report the names involved
             var cycleMembers = inDegree
                 .Where(kv => kv.Value > 0)
-                .Select(kv => kv.Key)
-                .OrderBy(n => n, StringComparer.Ordinal);
+                .Select(kv => fragmentsById[kv.Key])
+                .OrderBy(f => OrderingKey(f), StringComparer.Ordinal);
 
             diagnostics.Add(new Diagnostic(
                 DiagnosticSeverity.Error,
                 "Circular dependency detected among fragments: " +
-                string.Join(", ", cycleMembers.Select(n => $"'{n}'")) + "."));
+                string.Join(", ", cycleMembers.Select(DescribeFragment)) + "."));
 
             return (Array.Empty<Fragment>(), diagnostics);
         }
 
         return (ordered, diagnostics);
     }
+
+    private static int CompareFragmentIds(
+        string left,
+        string right,
+        IReadOnlyDictionary<string, Fragment> fragmentsById)
+    {
+        if (left == right)
+            return 0;
+
+        var leftFragment = fragmentsById[left];
+        var rightFragment = fragmentsById[right];
+
+        var compare = string.Compare(
+            OrderingKey(leftFragment),
+            OrderingKey(rightFragment),
+            StringComparison.Ordinal);
+
+        return compare != 0
+            ? compare
+            : string.Compare(left, right, StringComparison.Ordinal);
+    }
+
+    private static string OrderingKey(Fragment fragment) =>
+        fragment.Name is null ? $"1:{fragment.InternalId}" : $"0:{fragment.Name}";
+
+    private static string DescribeFragment(Fragment fragment) =>
+        fragment.Name is null
+            ? $"(unnamed fragment at {fragment.InternalId})"
+            : $"'{fragment.Name}'";
 }

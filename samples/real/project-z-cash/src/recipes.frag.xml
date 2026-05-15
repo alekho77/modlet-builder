@@ -9,7 +9,7 @@
     Requires evCash to be defined first (pz-cash.items.epiccash) because
     evCash is used as an ingredient in every recipe below.
   -->
-  <fragment name="pz-cash.recipes.project-z" target="recipes" requires="pz-cash.items.epiccash">
+  <fragment target="recipes" requires="pz-cash.items.epiccash">
     <append xpath="/recipes">
       <recipe name="rareSniperRifleBundle" count="1" craft_time="2" always_unlocked="true" tags="packMuleCrafting">
         <ingredient name="evCash" count="55"/>

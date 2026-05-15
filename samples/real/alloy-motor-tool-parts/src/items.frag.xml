@@ -3,7 +3,7 @@
     Alloy Motor Tool Parts - item definition.
     Source: EV_AlloyMotorToolParts by Aleksei Khozin
   -->
-  <fragment name="ev-alloy.items.base" target="items">
+  <fragment target="items">
     <append xpath="/items">
       <item name="motorToolPartsA_Alloy">
         <property name="Extends" value="meleeToolAxeT3ChainsawParts"/>

@@ -10,7 +10,7 @@
     Requires evCash to be defined first (pz-cash.items.epiccash) to ensure
     correct load order within the items.xml output file.
   -->
-  <fragment name="pz-cash.items.project-z-groups" target="items" requires="pz-cash.items.epiccash">
+  <fragment target="items" requires="pz-cash.items.epiccash">
     <set xpath="/items/item[@name='rareSniperRifleBundle']/property[@name='Group']/@value">Ammo/Weapons,Ranged Weapons</set>
     <set xpath="/items/item[@name='rareAutoShotgunBundle']/property[@name='Group']/@value">Ammo/Weapons,Ranged Weapons</set>
     <set xpath="/items/item[@name='rareM60Bundle']/property[@name='Group']/@value">Ammo/Weapons,Ranged Weapons</set>

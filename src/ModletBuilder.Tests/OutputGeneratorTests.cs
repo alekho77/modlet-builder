@@ -225,7 +225,23 @@ public class OutputGeneratorTests : IDisposable
         Assert.True(File.Exists(expected));
     }
 
+    [Fact]
+    public void Unnamed_fragment_contributes_body_to_output()
+    {
+        OutputGenerator.Generate(
+            [Frag(null, "items", "<append xpath=\"/items\"><item name=\"x\"/></append>", "source/items.frag.xml#L1#F0")],
+            _tempDir, dryRun: false, clean: false, _nullLogger);
+
+        var doc = XDocument.Load(Path.Combine(_tempDir, "Config", "items.xml"));
+
+        Assert.Single(doc.Root!.Elements("append"));
+        Assert.Equal("x", doc.Root.Element("append")?.Element("item")?.Attribute("name")?.Value);
+    }
+
     private static Fragment Frag(string name, string target, string bodyXml = "<append/>") =>
-        new(name, target, [], $"{name}.frag.xml", [XElement.Parse(bodyXml)]);
+        Frag(name, target, bodyXml, internalId: $"id:{name}");
+
+    private static Fragment Frag(string? name, string target, string bodyXml, string internalId) =>
+        new(internalId, name, target, [], $"{name ?? internalId}.frag.xml", [XElement.Parse(bodyXml)]);
 }
 

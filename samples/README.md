@@ -38,12 +38,18 @@ against the corresponding `src/` directory and is kept in sync with the tool.
 The golden tests in `SampleGoldenTests.cs` verify that re-building always produces
 identical output.
 
+Fragment `name` is used only as a public reference target for `requires`. These
+samples omit `name` on fragments that no other fragment references. Every fragment
+still receives an internal deterministic source-location id during the build; that
+id is not written in source XML and cannot be used in `requires`.
+
 ### alloy-motor-tool-parts
 
 A small three-fragment example: an item definition, a recipe, and a progression
 unlock from a straightforward single-mod source set.
 
 Demonstrates: multiple output targets from one source set.
+All fragments are unnamed because nothing depends on them by public name.
 
 ### epic-cash
 
@@ -51,6 +57,7 @@ A medium example: a custom currency item plus four vehicle bundle items, and
 matching recipes that use the currency as ingredient.
 
 Demonstrates: many similar body elements, one `requires` relationship across targets.
+Only the item fragment is named because the recipe fragment depends on it.
 
 ### project-z-cash
 
@@ -59,6 +66,7 @@ required by both an item-group patch fragment and a recipes fragment.
 
 Demonstrates: multiple fragments writing to the same target (`items.xml`), two fragments
 independently requiring the same upstream fragment, cross-target `requires`.
+Only the shared evCash fragment is named because both downstream fragments depend on it.
 
 ## Invalid samples
 

@@ -4,7 +4,7 @@
     The target 'not_a_valid_target' is not in the list of known targets.
     Expected error: Unknown target 'not_a_valid_target'. Must be one of the known target values.
   -->
-  <fragment name="invalid.unknown-target" target="not_a_valid_target">
+  <fragment target="not_a_valid_target">
     <append xpath="/items">
       <item name="testItem"/>
     </append>
