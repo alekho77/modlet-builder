@@ -63,3 +63,4 @@ $RECYCLE.BIN/
 *.env
 *.env.local
 .secrets/
+*.csproj.lscache
