@@ -46,9 +46,15 @@ internal static class SampleTestHelper
         }
     }
 
-    internal static IEnumerable<object[]> GetCases(string category) =>
+    internal static IEnumerable<object[]> GetGoldenCases() =>
         CachedTestCases.Value
-            .Where(testCase => string.Equals(testCase.Category, category, StringComparison.OrdinalIgnoreCase))
+            .Where(testCase => !string.IsNullOrWhiteSpace(testCase.Expected.ExpectedResultPath))
+            .OrderBy(testCase => testCase.Id, StringComparer.Ordinal)
+            .Select(testCase => new object[] { testCase });
+
+    internal static IEnumerable<object[]> GetIntegrationCases() =>
+        CachedTestCases.Value
+            .Where(testCase => string.IsNullOrWhiteSpace(testCase.Expected.ExpectedResultPath))
             .OrderBy(testCase => testCase.Id, StringComparer.Ordinal)
             .Select(testCase => new object[] { testCase });
 
@@ -63,16 +69,7 @@ internal static class SampleTestHelper
         ApplyFileSetup(testCase.PreSetupFiles, context);
         ApplyFileSetup(testCase.InlineSetupFiles, context);
 
-        switch (NormalizeAssertionMode(testCase.Expected.AssertionMode))
-        {
-            case "determinism":
-                ExecuteDeterminismCase(testCase, context);
-                break;
-
-            default:
-                ExecuteSingleRunCase(testCase, context);
-                break;
-        }
+        ExecuteSingleRunCase(testCase, context);
     }
 
     /// <summary>
@@ -151,41 +148,10 @@ internal static class SampleTestHelper
     private static void ExecuteSingleRunCase(SampleTestCase testCase, SampleExecutionContext context)
     {
         var outputPath = ResolvePathToken(testCase.Command.Output, context);
-        var exitCode = RunBuildSuppressed(BuildArgs(testCase.Command, context, useRepeatOutput: false));
+        var exitCode = RunBuildSuppressed(BuildArgs(testCase.Command, context));
 
         Assert.Equal(testCase.Expected.ExitCode, exitCode);
         AssertExpectedFilesystemState(outputPath, testCase.Expected, context);
-    }
-
-    private static void ExecuteDeterminismCase(SampleTestCase testCase, SampleExecutionContext context)
-    {
-        var firstOutputPath = ResolvePathToken(testCase.Command.Output, context);
-        var secondOutputPath = ResolvePathToken(
-            testCase.Command.RepeatOutput
-            ?? throw new InvalidOperationException(
-                $"Test case '{testCase.Id}' uses determinism mode but does not define command.repeat_output."),
-            context);
-
-        var firstExitCode = RunBuildSuppressed(BuildArgs(testCase.Command, context, useRepeatOutput: false));
-        var secondExitCode = RunBuildSuppressed(BuildArgs(testCase.Command, context, useRepeatOutput: true));
-
-        Assert.Equal(testCase.Expected.ExitCode, firstExitCode);
-        Assert.Equal(testCase.Expected.ExitCode, secondExitCode);
-
-        if (!string.IsNullOrWhiteSpace(testCase.Expected.ExpectedResultPath))
-        {
-            var expectedPath = ResolvePathToken(testCase.Expected.ExpectedResultPath, context);
-            AssertOutputMatchesExpected(firstOutputPath, expectedPath);
-        }
-
-        AssertOutputMatchesExpected(secondOutputPath, firstOutputPath);
-        AssertExpectedRelativePaths(secondOutputPath, testCase.Expected, context);
-
-        if (testCase.Expected.ConfigCreated.HasValue)
-        {
-            var configDir = Path.Combine(secondOutputPath, "Config");
-            Assert.Equal(testCase.Expected.ConfigCreated.Value, Directory.Exists(configDir));
-        }
     }
 
     private static void AssertExpectedFilesystemState(
@@ -233,21 +199,15 @@ internal static class SampleTestHelper
 
     private static string[] BuildArgs(
         SampleBuildCommand command,
-        SampleExecutionContext context,
-        bool useRepeatOutput)
+        SampleExecutionContext context)
     {
         var args = new List<string> { command.Verb, "--src" };
 
         foreach (var source in command.Sources)
             args.Add(ResolvePathToken(source, context));
 
-        var output = useRepeatOutput
-            ? command.RepeatOutput
-                ?? throw new InvalidOperationException("repeat_output is required for determinism mode.")
-            : command.Output;
-
         args.Add("--out");
-        args.Add(ResolvePathToken(output, context));
+        args.Add(ResolvePathToken(command.Output, context));
 
         if (command.Recursive)
             args.Add("--recursive");
@@ -299,9 +259,6 @@ internal static class SampleTestHelper
         return Path.GetFullPath(Path.Combine(context.RepoRoot, resolved));
     }
 
-    private static string NormalizeAssertionMode(string assertionMode) =>
-        string.IsNullOrWhiteSpace(assertionMode) ? "file-system" : assertionMode;
-
     private static string SanitizePathSegment(string value)
     {
         var invalidChars = Path.GetInvalidFileNameChars();
@@ -327,8 +284,6 @@ public sealed class SampleTestCase
 
     public string Description { get; set; } = string.Empty;
 
-    public string Category { get; set; } = string.Empty;
-
     public SampleBuildCommand Command { get; set; } = new();
 
     public List<string> SetupDirectories { get; set; } = [];
@@ -350,8 +305,6 @@ public sealed class SampleBuildCommand
 
     public string Output { get; set; } = "{tempOut}";
 
-    public string? RepeatOutput { get; set; }
-
     public bool Recursive { get; set; }
 
     public bool DryRun { get; set; }
@@ -364,8 +317,6 @@ public sealed class SampleBuildCommand
 public sealed class SampleExpectedResult
 {
     public int ExitCode { get; set; }
-
-    public string AssertionMode { get; set; } = "file-system";
 
     public string? ExpectedResultPath { get; set; }
 

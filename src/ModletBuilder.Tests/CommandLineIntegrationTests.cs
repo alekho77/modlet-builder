@@ -24,7 +24,7 @@ public sealed class CommandLineIntegrationTests : IDisposable
             Directory.Delete(_tempRoot, recursive: true);
     }
 
-    public static IEnumerable<object[]> IntegrationCases() => SampleTestHelper.GetCases("integration");
+    public static IEnumerable<object[]> IntegrationCases() => SampleTestHelper.GetIntegrationCases();
 
     [Theory]
     [MemberData(nameof(IntegrationCases))]

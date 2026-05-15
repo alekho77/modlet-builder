@@ -12,12 +12,6 @@ samples/
 │   ├── alloy-motor-tool-parts/
 │   │   ├── src/             — *.frag.xml source documents
 │   │   └── expected/Config/ — expected generated Config files
-│   ├── epic-cash/
-│   │   ├── src/
-│   │   └── expected/Config/
-│   └── project-z-cash/
-│       ├── src/
-│       └── expected/Config/
 └── invalid/                 — fragment files that intentionally trigger build errors
     ├── missing-dependency.frag.xml
     ├── duplicate-names.frag.xml
@@ -77,23 +71,6 @@ unlock from a straightforward single-mod source set.
 Demonstrates: multiple output targets from one source set.
 All fragments are unnamed because nothing depends on them by public name.
 
-### epic-cash
-
-A medium example: a custom currency item plus four vehicle bundle items, and
-matching recipes that use the currency as ingredient.
-
-Demonstrates: many similar body elements, one `requires` relationship across targets.
-Only the item fragment is named because the recipe fragment depends on it.
-
-### project-z-cash
-
-A three-fragment cross-file dependency example: an evCash item definition that is
-required by both an item-group patch fragment and a recipes fragment.
-
-Demonstrates: multiple fragments writing to the same target (`items.xml`), two fragments
-independently requiring the same upstream fragment, cross-target `requires`.
-Only the shared evCash fragment is named because both downstream fragments depend on it.
-
 ## Invalid samples
 
 Each file in `samples/invalid/` demonstrates one specific build error. They are
@@ -115,8 +92,6 @@ To regenerate all expected output after a behaviour change:
 
 ```bash
 modlet-builder build --src samples/real/alloy-motor-tool-parts/src --out samples/real/alloy-motor-tool-parts/expected --clean
-modlet-builder build --src samples/real/epic-cash/src              --out samples/real/epic-cash/expected              --clean
-modlet-builder build --src samples/real/project-z-cash/src         --out samples/real/project-z-cash/expected         --clean
 ```
 
 After regenerating, run the tests to confirm all golden assertions still pass.

@@ -21,7 +21,7 @@ public sealed class SampleGoldenTests : IDisposable
             Directory.Delete(_tempRoot, recursive: true);
     }
 
-    public static IEnumerable<object[]> GoldenCases() => SampleTestHelper.GetCases("golden");
+    public static IEnumerable<object[]> GoldenCases() => SampleTestHelper.GetGoldenCases();
 
     [Theory]
     [MemberData(nameof(GoldenCases))]
