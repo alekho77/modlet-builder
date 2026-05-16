@@ -1,6 +1,7 @@
 using System.Text;
 using ModletBuilder.Core.Logging;
 using ModletBuilder.Core.Models;
+using ModletBuilder.Core.Parsing;
 
 namespace ModletBuilder.Core.Generation;
 
@@ -8,9 +9,19 @@ internal static class LocalizationGenerator
 {
     internal const string RelativePath = "Config/Localization.txt";
 
-    internal static readonly string Header =
-        "Key,File,Type,UsedInMainMenu,NoTranslate,english,Context / Alternate Text," +
-        "german,spanish,french,italian,japanese,koreana,polish,brazilian,russian,turkish,schinese,tchinese";
+    internal static readonly string Header = BuildHeader();
+
+    private static string BuildHeader()
+    {
+        var parts = new List<string> { "Key", "File", "Type", "UsedInMainMenu", "NoTranslate" };
+        foreach (var lang in KnownLanguages.All)
+        {
+            parts.Add(lang);
+            if (lang == "english")
+                parts.Add("Context / Alternate Text");
+        }
+        return string.Join(",", parts);
+    }
 
     internal static IReadOnlyList<Diagnostic> Generate(
         IReadOnlyList<LocalizationEntry> entries,
@@ -78,26 +89,21 @@ internal static class LocalizationGenerator
 
     internal static string ToCsvRow(LocalizationEntry entry)
     {
-        return string.Join(",",
+        var parts = new List<string>
+        {
             Escape(entry.Key),
             Escape(entry.File),
             Escape(entry.Type),
             Escape(entry.UsedInMainMenu),
             Escape(entry.NoTranslate),
-            Escape(entry.English),
-            Escape(entry.Context),
-            Escape(entry.German),
-            Escape(entry.Spanish),
-            Escape(entry.French),
-            Escape(entry.Italian),
-            Escape(entry.Japanese),
-            Escape(entry.Koreana),
-            Escape(entry.Polish),
-            Escape(entry.Brazilian),
-            Escape(entry.Russian),
-            Escape(entry.Turkish),
-            Escape(entry.Schinese),
-            Escape(entry.Tchinese));
+        };
+        foreach (var lang in KnownLanguages.All)
+        {
+            parts.Add(Escape(entry.Languages.TryGetValue(lang, out var v) ? v : string.Empty));
+            if (lang == "english")
+                parts.Add(Escape(entry.Context));
+        }
+        return string.Join(",", parts);
     }
 
     // RFC 4180 CSV escaping: wrap in quotes if the value contains commas, quotes, CR, or LF.

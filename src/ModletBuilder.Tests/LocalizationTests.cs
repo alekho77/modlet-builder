@@ -51,8 +51,8 @@ public class LocalizationTests : IDisposable
         Assert.Equal("myKey", entry.Key);
         Assert.Equal("items", entry.File);
         Assert.Equal("Item", entry.Type);
-        Assert.Equal("My Item", entry.English);
-        Assert.Equal(string.Empty, entry.Russian);
+        Assert.Equal("My Item", entry.Languages["english"]);
+        Assert.False(entry.Languages.ContainsKey("russian"));
     }
 
     [Fact]
@@ -642,21 +642,19 @@ public class LocalizationTests : IDisposable
             Type: "Item",
             UsedInMainMenu: string.Empty,
             NoTranslate: string.Empty,
-            English: english,
             Context: string.Empty,
-            German: string.Empty,
-            Spanish: string.Empty,
-            French: string.Empty,
-            Italian: string.Empty,
-            Japanese: string.Empty,
-            Koreana: string.Empty,
-            Polish: string.Empty,
-            Brazilian: string.Empty,
-            Russian: russian,
-            Turkish: string.Empty,
-            Schinese: string.Empty,
-            Tchinese: string.Empty,
+            Languages: BuildLanguages(english, russian),
             SourceFile: sourceFile);
+
+    private static IReadOnlyDictionary<string, string> BuildLanguages(
+        string english = "",
+        string russian = "")
+    {
+        var d = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (english.Length > 0) d["english"] = english;
+        if (russian.Length > 0) d["russian"] = russian;
+        return d;
+    }
 
     /// <summary>Helper that creates a <see cref="LocalizationEntry"/> with empty File and Type,
     /// simulating a source localization block that omitted those attributes.</summary>
@@ -667,20 +665,8 @@ public class LocalizationTests : IDisposable
             Type: string.Empty,
             UsedInMainMenu: string.Empty,
             NoTranslate: string.Empty,
-            English: string.Empty,
             Context: string.Empty,
-            German: string.Empty,
-            Spanish: string.Empty,
-            French: string.Empty,
-            Italian: string.Empty,
-            Japanese: string.Empty,
-            Koreana: string.Empty,
-            Polish: string.Empty,
-            Brazilian: string.Empty,
-            Russian: string.Empty,
-            Turkish: string.Empty,
-            Schinese: string.Empty,
-            Tchinese: string.Empty,
+            Languages: new Dictionary<string, string>(StringComparer.Ordinal),
             SourceFile: sourceFile);
 
     private static Fragment FragWith(string sourceFile, string bodyXml) =>

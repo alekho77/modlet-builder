@@ -2,7 +2,8 @@ namespace ModletBuilder.Core.Models;
 
 /// <summary>
 /// Represents a single row in the generated Localization.txt file.
-/// All language values that are absent in the source XML will be written as empty CSV cells.
+/// Language values are stored in <see cref="Languages"/>, keyed by the lower-case language name
+/// as defined in <c>KnownLanguages.All</c>. Absent languages are written as empty CSV cells.
 /// </summary>
 internal sealed record LocalizationEntry(
     string Key,
@@ -10,18 +11,6 @@ internal sealed record LocalizationEntry(
     string Type,
     string UsedInMainMenu,
     string NoTranslate,
-    string English,
     string Context,
-    string German,
-    string Spanish,
-    string French,
-    string Italian,
-    string Japanese,
-    string Koreana,
-    string Polish,
-    string Brazilian,
-    string Russian,
-    string Turkish,
-    string Schinese,
-    string Tchinese,
+    IReadOnlyDictionary<string, string> Languages,
     string SourceFile);

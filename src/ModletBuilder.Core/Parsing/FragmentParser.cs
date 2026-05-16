@@ -246,28 +246,14 @@ internal static class FragmentParser
         if (diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
             return (null, diagnostics);
 
-        string Lang(string name) => langValues.TryGetValue(name, out var v) ? v : string.Empty;
-
         var entry = new LocalizationEntry(
             Key: key!,
             File: file,
             Type: type,
             UsedInMainMenu: usedInMainMenu,
             NoTranslate: noTranslate,
-            English: Lang("english"),
             Context: context,
-            German: Lang("german"),
-            Spanish: Lang("spanish"),
-            French: Lang("french"),
-            Italian: Lang("italian"),
-            Japanese: Lang("japanese"),
-            Koreana: Lang("koreana"),
-            Polish: Lang("polish"),
-            Brazilian: Lang("brazilian"),
-            Russian: Lang("russian"),
-            Turkish: Lang("turkish"),
-            Schinese: Lang("schinese"),
-            Tchinese: Lang("tchinese"),
+            Languages: langValues,
             SourceFile: filePath);
 
         return (entry, diagnostics);
