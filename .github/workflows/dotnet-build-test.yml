@@ -20,7 +20,7 @@ on:
         default: false
     outputs:
       nuget-version:
-        description: 'GitVersion NuGet version (nuGetVersionV2).'
+        description: 'GitVersion SemVer version (semVer).'
         value: ${{ jobs.determine-version.outputs.nuget-version }}
       assembly-version:
         description: 'GitVersion assembly semver (assemblySemVer).'
@@ -39,7 +39,7 @@ jobs:
   determine-version:
     runs-on: ubuntu-latest
     outputs:
-      nuget-version: ${{ steps.gitversion.outputs.nuGetVersionV2 }}
+      nuget-version: ${{ steps.gitversion.outputs.semVer }}
       assembly-version: ${{ steps.gitversion.outputs.assemblySemVer }}
       file-version: ${{ steps.gitversion.outputs.assemblySemFileVer }}
       informational-version: ${{ steps.gitversion.outputs.informationalVersion }}
