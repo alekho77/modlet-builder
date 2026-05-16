@@ -6,7 +6,7 @@ namespace ModletBuilder.Core.Parsing;
 
 internal static class FragmentParser
 {
-    internal static (IReadOnlyList<Fragment> Fragments, IReadOnlyList<Diagnostic> Diagnostics) Parse(string filePath)
+    internal static (IReadOnlyList<Fragment> Fragments, IReadOnlyList<LocalizationEntry> LocalizationEntries, IReadOnlyList<Diagnostic> Diagnostics) Parse(string filePath)
     {
         var diagnostics = new List<Diagnostic>();
         XDocument doc;
@@ -21,7 +21,7 @@ internal static class FragmentParser
                 DiagnosticSeverity.Error,
                 $"Malformed XML: {ex.Message}",
                 filePath));
-            return ([], diagnostics);
+            return ([], [], diagnostics);
         }
         catch (Exception ex)
         {
@@ -29,7 +29,7 @@ internal static class FragmentParser
                 DiagnosticSeverity.Error,
                 $"Could not read file: {ex.Message}",
                 filePath));
-            return ([], diagnostics);
+            return ([], [], diagnostics);
         }
 
         var root = doc.Root;
@@ -41,7 +41,7 @@ internal static class FragmentParser
                 DiagnosticSeverity.Error,
                 $"Root element must be <modlet>, found {found}.",
                 filePath));
-            return ([], diagnostics);
+            return ([], [], diagnostics);
         }
 
         // Validate that <modlet> carries no attributes.
@@ -54,15 +54,28 @@ internal static class FragmentParser
                 filePath));
         }
 
-        // Report unexpected non-<fragment> children
-        foreach (var child in root.Elements().Where(e => e.Name.LocalName != "fragment"))
+        // Report unexpected children — only <fragment> and <localization> are allowed at modlet level.
+        foreach (var child in root.Elements()
+            .Where(e => e.Name.LocalName != "fragment" && e.Name.LocalName != "localization"))
         {
             diagnostics.Add(new Diagnostic(
                 DiagnosticSeverity.Error,
-                $"Unexpected element <{child.Name.LocalName}> inside <modlet>. Only <fragment> elements are allowed.",
+                $"Unexpected element <{child.Name.LocalName}> inside <modlet>. " +
+                "Only <fragment> and <localization> elements are allowed.",
                 filePath));
         }
 
+        // ── Parse <localization> blocks at modlet level ───────────────────────
+        var localizationEntries = new List<LocalizationEntry>();
+        foreach (var locEl in root.Elements().Where(e => e.Name.LocalName == "localization"))
+        {
+            var (entry, locDiagnostics) = ParseLocalizationElement(locEl, filePath);
+            diagnostics.AddRange(locDiagnostics);
+            if (entry is not null)
+                localizationEntries.Add(entry);
+        }
+
+        // ── Parse <fragment> elements ─────────────────────────────────────────
         var fragmentElements = root.Elements()
             .Where(e => e.Name.LocalName == "fragment")
             .ToList();
@@ -77,7 +90,7 @@ internal static class FragmentParser
                     "Source document <modlet> contains no <fragment> elements.",
                     filePath));
             }
-            return ([], diagnostics);
+            return ([], localizationEntries, diagnostics);
         }
 
         var fragments = new List<Fragment>(fragmentElements.Count);
@@ -90,7 +103,7 @@ internal static class FragmentParser
                 fragments.Add(fragment);
         }
 
-        return (fragments, diagnostics);
+        return (fragments, localizationEntries, diagnostics);
     }
 
     private static (Fragment? Fragment, IReadOnlyList<Diagnostic> Diagnostics) ParseFragmentElement(
@@ -140,10 +153,133 @@ internal static class FragmentParser
         var requires = requiresAttr
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
+        var internalId = CreateInternalId(el, filePath, fragmentOrdinal);
+
+        // Detect misplaced <localization> blocks inside <fragment> and guide the user.
+        foreach (var child in el.Elements().Where(c => c.Name.LocalName == "localization"))
+        {
+            diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                $"<localization> must be declared at the <modlet> level, not inside <fragment> " +
+                $"{DescribeFragment(name, internalId)}. Move it to be a direct child of <modlet>.",
+                filePath));
+        }
+
+        if (diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
+            return (null, diagnostics);
+
+        // All children of <fragment> are pure XML payload — written verbatim to the target file.
         var body = el.Elements().ToList();
 
-        var internalId = CreateInternalId(el, filePath, fragmentOrdinal);
         return (new Fragment(internalId, name, target!, requires, filePath, body), diagnostics);
+    }
+
+    private static (LocalizationEntry? Entry, IReadOnlyList<Diagnostic> Diagnostics) ParseLocalizationElement(
+        XElement el, string filePath)
+    {
+        var diagnostics = new List<Diagnostic>();
+
+        var key = el.Attribute("key")?.Value;
+        var file = el.Attribute("file")?.Value ?? string.Empty;
+        var type = el.Attribute("type")?.Value ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(key))
+            diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
+                "Localization block is missing required attribute 'key'.", filePath));
+
+        var usedInMainMenu = el.Attribute("usedInMainMenu")?.Value ?? string.Empty;
+
+        var noTranslateRaw = el.Attribute("noTranslate")?.Value;
+        string noTranslate;
+        if (noTranslateRaw is null)
+        {
+            noTranslate = string.Empty;
+        }
+        else if (noTranslateRaw.Equals("true", StringComparison.OrdinalIgnoreCase) || noTranslateRaw == "1")
+        {
+            noTranslate = "x";
+        }
+        else if (noTranslateRaw.Equals("false", StringComparison.OrdinalIgnoreCase) || noTranslateRaw == "0")
+        {
+            noTranslate = string.Empty;
+        }
+        else
+        {
+            diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
+                $"Invalid value '{noTranslateRaw}' for attribute 'noTranslate' on " +
+                $"<localization key=\"{key ?? "?"}\">. Expected: true, false, 1, or 0.",
+                filePath));
+            noTranslate = string.Empty;
+        }
+
+        var context = el.Attribute("context")?.Value ?? string.Empty;
+
+        var knownAttribs = new HashSet<string>(StringComparer.Ordinal)
+            { "key", "file", "type", "usedInMainMenu", "noTranslate", "context" };
+        foreach (var attr in el.Attributes())
+        {
+            if (!knownAttribs.Contains(attr.Name.LocalName))
+            {
+                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
+                    $"Unknown attribute '{attr.Name.LocalName}' on <localization> block. " +
+                    $"Allowed attributes are: key, file, type, usedInMainMenu, noTranslate, context.",
+                    filePath));
+            }
+        }
+
+        if (diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
+            return (null, diagnostics);
+
+        var seenLanguages = new HashSet<string>(StringComparer.Ordinal);
+        var langValues = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var langEl in el.Elements())
+        {
+            var lang = langEl.Name.LocalName;
+
+            if (!KnownLanguages.IsKnown(lang))
+            {
+                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
+                    $"Unknown language element <{lang}> in <localization key=\"{key}\">. " +
+                    $"Supported languages: {string.Join(", ", KnownLanguages.All)}.",
+                    filePath));
+                continue;
+            }
+
+            if (!seenLanguages.Add(lang))
+            {
+                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
+                    $"Duplicate language element <{lang}> in <localization key=\"{key}\">.",
+                    filePath));
+                continue;
+            }
+
+            var text = langEl.Attribute("text")?.Value;
+            if (text is null)
+            {
+                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
+                    $"Language element <{lang}> in <localization key=\"{key}\"> is missing required attribute 'text'.",
+                    filePath));
+                continue;
+            }
+
+            langValues[lang] = text;
+        }
+
+        if (diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
+            return (null, diagnostics);
+
+        var entry = new LocalizationEntry(
+            Key: key!,
+            File: file,
+            Type: type,
+            UsedInMainMenu: usedInMainMenu,
+            NoTranslate: noTranslate,
+            Context: context,
+            Languages: langValues,
+            SourceFile: filePath);
+
+        return (entry, diagnostics);
     }
 
     private static string CreateInternalId(XElement element, string filePath, int fragmentOrdinal)

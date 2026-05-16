@@ -1,0 +1,31 @@
+<modlet>
+
+  <!-- Description localization entry for the item defined below. -->
+  <!-- file and type are intentionally omitted: the build tool auto-derives them
+       from the <item> parent element in the fragment that references this key. -->
+  <localization key="evSampleItemDesc" context="Item description">
+    <english text="A demonstration item for modlet-builder localization support."/>
+    <russian text="Демонстрационный предмет для поддержки локализации в modlet-builder."/>
+  </localization>
+
+  <!-- Item definition fragment: pure XML patch payload. -->
+  <fragment name="localization-sample.items.base" target="items">
+    <append xpath="/items">
+      <item name="evSampleItem">
+        <property name="Extends" value="meleeToolRepairT1ClawHammer"/>
+        <property name="DescriptionKey" value="evSampleItemDesc"/>
+      </item>
+    </append>
+  </fragment>
+
+  <!-- Recipe fragment: depends on the item fragment. Pure XML patch payload. -->
+  <fragment name="localization-sample.recipes.base" target="recipes"
+    requires="localization-sample.items.base">
+    <append xpath="/recipes">
+      <recipe name="evSampleItem" count="1" craft_area="workbench">
+        <ingredient name="resourceWood" count="10"/>
+      </recipe>
+    </append>
+  </fragment>
+
+</modlet>

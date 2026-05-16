@@ -1,0 +1,2 @@
+Key,File,Type,UsedInMainMenu,NoTranslate,english,Context / Alternate Text,german,spanish,french,italian,japanese,koreana,polish,brazilian,russian,turkish,schinese,tchinese
+evSampleItemDesc,items,Item,,,A demonstration item for modlet-builder localization support.,Item description,,,,,,,,,Демонстрационный предмет для поддержки локализации в modlet-builder.,,,

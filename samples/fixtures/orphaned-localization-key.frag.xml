@@ -1,0 +1,16 @@
+<modlet>
+  <!--
+    Error fixture: the localization key below is not referenced by any
+    <property name="DescriptionKey"> in any fragment, which is a build error.
+  -->
+  <localization key="evSampleItem" file="items" type="Item">
+    <english text="Sample Item"/>
+  </localization>
+  <fragment target="items">
+    <append xpath="/items">
+      <item name="evSampleItem">
+        <property name="Extends" value="meleeToolRepairT1ClawHammer"/>
+      </item>
+    </append>
+  </fragment>
+</modlet>

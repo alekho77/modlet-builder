@@ -6,6 +6,7 @@ using ModletBuilder.Core.Models;
 using ModletBuilder.Core.Parsing;
 using ModletBuilder.Core.Resolution;
 using ModletBuilder.Core.SourceDiscovery;
+using ModletBuilder.Core.Validation;
 
 internal static class CommandLine
 {
@@ -65,11 +66,13 @@ internal static class CommandLine
 
         // ── Stage 0: Fragment parsing ─────────────────────────────────────────
         var fragments = new List<Fragment>();
+        var localizationEntries = new List<LocalizationEntry>();
         foreach (var file in files)
         {
-            var (fileFragments, parseDiagnostics) = FragmentParser.Parse(file);
+            var (fileFragments, fileLocEntries, parseDiagnostics) = FragmentParser.Parse(file);
             allDiagnostics.AddRange(parseDiagnostics);
             fragments.AddRange(fileFragments);
+            localizationEntries.AddRange(fileLocEntries);
         }
 
         logger.Debug($"Parsed {fragments.Count} fragment(s) from {files.Count} file(s).");
@@ -98,9 +101,29 @@ internal static class CommandLine
 
         logger.Debug($"Resolved order for {ordered.Count} fragment(s).");
 
+        // ── Stage 1.25: Localization attribute resolution ─────────────────────
+        // Auto-fill File and Type for localization entries that omitted them in source XML.
+        var localizationEntriesResolved = LocalizationAttributeResolver.Resolve(localizationEntries, ordered);
+
+        // ── Stage 1.5: Localization validation ───────────────────────────────
+        var localizationDiagnostics = LocalizationValidator.Validate(localizationEntriesResolved);
+        allDiagnostics.AddRange(localizationDiagnostics);
+
+        var orphanedDiagnostics = LocalizationValidator.ValidateOrphanedLocalizationKeys(localizationEntriesResolved, ordered);
+        allDiagnostics.AddRange(orphanedDiagnostics);
+
+        var descKeyTargetDiagnostics = LocalizationValidator.ValidateDescriptionKeyTargets(ordered);
+        allDiagnostics.AddRange(descKeyTargetDiagnostics);
+
+        if (HasErrors(allDiagnostics))
+        {
+            EmitDiagnostics(allDiagnostics, logger);
+            return ExitCodes.BuildError;
+        }
+
         // ── Stage 2: Output generation ────────────────────────────────────────
         var generateDiagnostics = OutputGenerator.Generate(
-            ordered, options.OutputDir, options.DryRun, options.Clean, logger);
+            ordered, localizationEntriesResolved, options.OutputDir, options.DryRun, options.Clean, logger);
         allDiagnostics.AddRange(generateDiagnostics);
 
         EmitDiagnostics(allDiagnostics, logger);
@@ -165,6 +188,7 @@ internal static class CommandLine
         writer.WriteLine("                                 containing *.frag.xml files. Required.");
         writer.WriteLine("      --out <mod-dir>            Output mod directory. Required.");
         writer.WriteLine("                                 Config files are written to {mod-dir}/Config/.");
+        writer.WriteLine("                                 Localization.txt, when present, is also written to {mod-dir}/Config/.");
         writer.WriteLine("      --recursive                Scan source directories recursively.");
         writer.WriteLine("      --dry-run                  Validate sources, resolve dependencies, and");
         writer.WriteLine("                                 report what would be built — without writing files.");

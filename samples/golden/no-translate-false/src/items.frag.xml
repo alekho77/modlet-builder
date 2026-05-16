@@ -1,0 +1,18 @@
+<modlet>
+
+  <!-- Localization entry with explicit noTranslate="false".
+       The NoTranslate column in Localization.txt must be empty. -->
+  <localization key="ntFalseItemDesc" noTranslate="false">
+    <english text="A test item with noTranslate set to false."/>
+  </localization>
+
+  <fragment name="no-translate-false.items.base" target="items">
+    <append xpath="/items">
+      <item name="ntFalseItem">
+        <property name="Extends" value="meleeToolRepairT1ClawHammer"/>
+        <property name="DescriptionKey" value="ntFalseItemDesc"/>
+      </item>
+    </append>
+  </fragment>
+
+</modlet>

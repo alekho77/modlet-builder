@@ -11,6 +11,7 @@ internal static class OutputGenerator
 {
     internal static IReadOnlyList<Diagnostic> Generate(
         IReadOnlyList<Fragment> fragments,
+        IReadOnlyList<LocalizationEntry> localizationEntries,
         string outDir,
         bool dryRun,
         bool clean,
@@ -22,7 +23,7 @@ internal static class OutputGenerator
 
         if (dryRun)
         {
-            ReportDryRun(fragments, outDir, clean, logger);
+            ReportDryRun(fragments, localizationEntries, outDir, clean, logger);
             return diagnostics;
         }
 
@@ -56,8 +57,11 @@ internal static class OutputGenerator
             return diagnostics;
         }
 
-        var generateDiagnostics = GenerateOutput(fragments, outDir, logger);
+        var generateDiagnostics = GenerateOutput(fragments, localizationEntries, outDir, logger);
         diagnostics.AddRange(generateDiagnostics);
+
+        var localizationDiagnostics = LocalizationGenerator.Generate(localizationEntries, outDir, dryRun: false, logger);
+        diagnostics.AddRange(localizationDiagnostics);
 
         return diagnostics;
     }
@@ -66,6 +70,7 @@ internal static class OutputGenerator
 
     private static void ReportDryRun(
         IReadOnlyList<Fragment> fragments,
+        IReadOnlyList<LocalizationEntry> localizationEntries,
         string outDir,
         bool clean,
         BuildLogger logger)
@@ -91,12 +96,15 @@ internal static class OutputGenerator
         logger.Information(
             $"[DRY RUN] {fragments.Count} fragment(s) → {configFiles.Count} config file(s): " +
             string.Join(", ", configFiles.Select(f => $"Config/{f}")) + ".");
+
+        LocalizationGenerator.Generate(localizationEntries, outDir, dryRun: true, logger);
     }
 
     // ── Real output ───────────────────────────────────────────────────────────
 
     private static IReadOnlyList<Diagnostic> GenerateOutput(
         IReadOnlyList<Fragment> fragments,
+        IReadOnlyList<LocalizationEntry> localizationEntries,
         string outDir,
         BuildLogger logger)
     {
@@ -145,6 +153,10 @@ internal static class OutputGenerator
                     $"Could not write '{outputPath}': {ex.Message}"));
             }
         }
+
+        var localizationCount = localizationEntries.Count;
+        if (localizationCount > 0)
+            logger.Information($"{localizationCount} localization row(s) → {LocalizationGenerator.RelativePath}.");
 
         logger.Information(
             $"{fragments.Count} fragment(s) → {byTarget.Count} config file(s).");

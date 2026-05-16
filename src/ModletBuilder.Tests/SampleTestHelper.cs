@@ -26,18 +26,21 @@ internal static class SampleTestHelper
     }
 
     /// <summary>
-    /// Runs <see cref="CommandLine.Run"/> with stdout and stderr redirected to
-    /// <see cref="TextWriter.Null"/> so that test runner output stays clean.
+    /// Runs <see cref="CommandLine.Run"/> and captures stdout and stderr,
+    /// returning the exit code together with the captured output.
     /// </summary>
-    internal static int RunBuildSuppressed(string[] args)
+    internal static (int ExitCode, string Stdout, string Stderr) RunBuildCapturing(string[] args)
     {
         var prevOut = Console.Out;
         var prevErr = Console.Error;
-        Console.SetOut(TextWriter.Null);
-        Console.SetError(TextWriter.Null);
+        var stdoutCapture = new StringWriter();
+        var stderrCapture = new StringWriter();
+        Console.SetOut(stdoutCapture);
+        Console.SetError(stderrCapture);
         try
         {
-            return CommandLine.Run(args);
+            var exitCode = CommandLine.Run(args);
+            return (exitCode, stdoutCapture.ToString(), stderrCapture.ToString());
         }
         finally
         {
@@ -45,6 +48,12 @@ internal static class SampleTestHelper
             Console.SetError(prevErr);
         }
     }
+
+    /// <summary>
+    /// Runs <see cref="CommandLine.Run"/> with stdout and stderr suppressed.
+    /// Use <see cref="RunBuildCapturing"/> when output assertions are needed.
+    /// </summary>
+    internal static int RunBuildSuppressed(string[] args) => RunBuildCapturing(args).ExitCode;
 
     internal static IEnumerable<object[]> GetGoldenCases() =>
         CachedTestCases.Value
@@ -73,39 +82,38 @@ internal static class SampleTestHelper
     }
 
     /// <summary>
-    /// Asserts that every XML file in <paramref name="expectedDir"/>/Config/ has
-    /// a matching counterpart in <paramref name="outDir"/>/Config/ with identical
+    /// Asserts that every file under <paramref name="expectedDir"/> has
+    /// a matching counterpart under <paramref name="outDir"/> with identical
     /// content (line-ending-normalised), and that no extra files exist in the
-    /// actual output.
+    /// actual output tree.
     /// </summary>
     internal static void AssertOutputMatchesExpected(string outDir, string expectedDir)
     {
-        var expectedConfigDir = Path.Combine(expectedDir, "Config");
-        var actualConfigDir = Path.Combine(outDir, "Config");
-
-        Assert.True(Directory.Exists(actualConfigDir),
-            $"Output Config directory was not created: {actualConfigDir}");
+        Assert.True(Directory.Exists(expectedDir),
+            $"Expected directory does not exist: {expectedDir}");
+        Assert.True(Directory.Exists(outDir),
+            $"Output directory was not created: {outDir}");
 
         var expectedFiles = Directory
-            .GetFiles(expectedConfigDir, "*.xml", SearchOption.AllDirectories)
-            .Select(f => Path.GetRelativePath(expectedConfigDir, f))
+            .GetFiles(expectedDir, "*", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(expectedDir, f))
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToList();
 
         foreach (var relative in expectedFiles)
         {
-            var actualFile = Path.Combine(actualConfigDir, relative);
+            var actualFile = Path.Combine(outDir, relative);
             Assert.True(File.Exists(actualFile), $"Expected output file missing: {relative}");
 
             var expectedContent = NormalizeLineEndings(
-                File.ReadAllText(Path.Combine(expectedConfigDir, relative)));
+                File.ReadAllText(Path.Combine(expectedDir, relative)));
             var actualContent = NormalizeLineEndings(File.ReadAllText(actualFile));
             Assert.Equal(expectedContent, actualContent);
         }
 
         var actualFiles = Directory
-            .GetFiles(actualConfigDir, "*.xml", SearchOption.AllDirectories)
-            .Select(f => Path.GetRelativePath(actualConfigDir, f))
+            .GetFiles(outDir, "*", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(outDir, f))
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToList();
 
@@ -148,10 +156,13 @@ internal static class SampleTestHelper
     private static void ExecuteSingleRunCase(SampleTestCase testCase, SampleExecutionContext context)
     {
         var outputPath = ResolvePathToken(testCase.Command.Output, context);
-        var exitCode = RunBuildSuppressed(BuildArgs(testCase.Command, context));
+        var (exitCode, stdout, _) = RunBuildCapturing(BuildArgs(testCase.Command, context));
 
         Assert.Equal(testCase.Expected.ExitCode, exitCode);
         AssertExpectedFilesystemState(outputPath, testCase.Expected, context);
+
+        foreach (var expected in testCase.Expected.StdoutContains)
+            Assert.Contains(expected, stdout, StringComparison.Ordinal);
     }
 
     private static void AssertExpectedFilesystemState(
@@ -325,6 +336,12 @@ public sealed class SampleExpectedResult
     public List<string> ExistingPaths { get; set; } = [];
 
     public List<string> MissingPaths { get; set; } = [];
+
+    /// <summary>
+    /// Substrings that must appear somewhere in the captured stdout of the build run.
+    /// Useful for asserting that specific warning or informational messages were emitted.
+    /// </summary>
+    public List<string> StdoutContains { get; set; } = [];
 }
 
 public sealed class SampleFileSpec

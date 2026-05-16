@@ -26,7 +26,7 @@ public class FragmentParserTests : IDisposable
     {
         var file = Write(@"<fragment name=""x"" target=""items""><append/></fragment>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(fragments);
         Assert.Contains(diagnostics, d =>
@@ -38,7 +38,7 @@ public class FragmentParserTests : IDisposable
     {
         var file = Write(@"<config><item name=""x""/></config>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(fragments);
         Assert.Contains(diagnostics, d =>
@@ -50,7 +50,7 @@ public class FragmentParserTests : IDisposable
     {
         var file = Write(@"<modlet></modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(fragments);
         Assert.Contains(diagnostics, d =>
@@ -62,7 +62,7 @@ public class FragmentParserTests : IDisposable
     {
         var file = Write(@"<modlet><other/></modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(fragments);
         Assert.Contains(diagnostics, d =>
@@ -74,7 +74,7 @@ public class FragmentParserTests : IDisposable
     {
         var file = Write(@"<modlet><fragment name=""x"" target=""items""><unclosed>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(fragments);
         Assert.Contains(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
@@ -94,7 +94,7 @@ public class FragmentParserTests : IDisposable
   </fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(diagnostics);
         Assert.Single(fragments);
@@ -117,7 +117,7 @@ public class FragmentParserTests : IDisposable
   </fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(diagnostics);
         Assert.Single(fragments);
@@ -129,7 +129,7 @@ public class FragmentParserTests : IDisposable
     {
         var file = Write(@"<modlet><fragment name=""mymod.items.base"" target=""items"" requires=""""><append/></fragment></modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(diagnostics);
         Assert.Single(fragments);
@@ -147,7 +147,7 @@ public class FragmentParserTests : IDisposable
   </fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(diagnostics);
         Assert.Single(fragments);
@@ -161,7 +161,7 @@ public class FragmentParserTests : IDisposable
     {
         var file = Write(@"<modlet><fragment name=""mymod.items.base"" target=""items""><append/></fragment></modlet>");
 
-        var (fragments, _) = FragmentParser.Parse(file);
+        var (fragments, _, _) = FragmentParser.Parse(file);
 
         Assert.Single(fragments);
         Assert.Equal(file, fragments[0].SourceFile);
@@ -179,7 +179,7 @@ public class FragmentParserTests : IDisposable
   <fragment name=""mymod.items.c"" target=""items""><append/></fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(diagnostics);
         Assert.Equal(3, fragments.Count);
@@ -196,7 +196,7 @@ public class FragmentParserTests : IDisposable
   <fragment name=""mymod.recipes"" target=""recipes""><append/></fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(diagnostics);
         Assert.Equal(2, fragments.Count);
@@ -213,7 +213,7 @@ public class FragmentParserTests : IDisposable
   <fragment name=""mymod.recipes"" target=""recipes"" requires=""mymod.items.base""><append/></fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(diagnostics);
         Assert.Equal(2, fragments.Count);
@@ -229,7 +229,7 @@ public class FragmentParserTests : IDisposable
   <fragment name=""mymod.recipes"" target=""recipes""><append/></fragment>
 </modlet>");
 
-        var (fragments, _) = FragmentParser.Parse(file);
+        var (fragments, _, _) = FragmentParser.Parse(file);
 
         Assert.Equal(2, fragments.Count);
         Assert.All(fragments, f => Assert.Equal(file, f.SourceFile));
@@ -242,7 +242,7 @@ public class FragmentParserTests : IDisposable
     {
         var file = Write(@"<modlet><fragment target=""items""><append/></fragment></modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
       Assert.Empty(diagnostics);
       Assert.Single(fragments);
@@ -256,7 +256,7 @@ public class FragmentParserTests : IDisposable
     {
       var file = Write(@"<modlet><fragment target=""recipes"" requires=""mymod.items.base""><append/></fragment></modlet>");
 
-      var (fragments, diagnostics) = FragmentParser.Parse(file);
+      var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
       Assert.Empty(diagnostics);
       Assert.Single(fragments);
@@ -273,7 +273,7 @@ public class FragmentParserTests : IDisposable
     <fragment target=""items""><append id=""2""/></fragment>
   </modlet>");
 
-      var (fragments, diagnostics) = FragmentParser.Parse(file);
+      var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
       Assert.Empty(diagnostics);
       Assert.Equal(2, fragments.Count);
@@ -285,7 +285,7 @@ public class FragmentParserTests : IDisposable
     {
         var file = Write(@"<modlet><fragment name=""mymod.items.base""><append/></fragment></modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(fragments);
         Assert.Contains(diagnostics, d =>
@@ -297,7 +297,7 @@ public class FragmentParserTests : IDisposable
     {
         var file = Write(@"<modlet><fragment name=""mymod.x"" target=""not_a_valid_target""><append/></fragment></modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(fragments);
         Assert.Contains(diagnostics, d =>
@@ -314,7 +314,7 @@ public class FragmentParserTests : IDisposable
   <fragment name=""mymod.broken""><append/></fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Single(fragments);
         Assert.Equal("mymod.items", fragments[0].Name);
@@ -331,7 +331,7 @@ public class FragmentParserTests : IDisposable
   <fragment name=""mymod.items"" target=""items"" hint=""ModA""><append/></fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Single(fragments);
         Assert.Equal("mymod.items", fragments[0].Name);
@@ -347,7 +347,7 @@ public class FragmentParserTests : IDisposable
   <fragment name=""mymod.items"" target=""items""><append/></fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Contains(diagnostics, d =>
             d.Severity == DiagnosticSeverity.Error && d.Message.Contains("hint"));
@@ -358,7 +358,7 @@ public class FragmentParserTests : IDisposable
     {
         var file = Write(@"<modlet><fragment name=""mymod.items"" target=""items"" unknown=""value""><append/></fragment></modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Single(fragments);
         Assert.Contains(diagnostics, d =>
@@ -370,7 +370,7 @@ public class FragmentParserTests : IDisposable
         {
           var file = Write(@"<modlet><fragment target=""items"" unknown=""value""><append/></fragment></modlet>");
 
-          var (fragments, diagnostics) = FragmentParser.Parse(file);
+          var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
           Assert.Single(fragments);
           Assert.Contains(diagnostics, d =>
@@ -387,7 +387,7 @@ public class FragmentParserTests : IDisposable
     {
         var file = Write(@"<modlet><fragment name=""mymod.items"" target=""items"" unknown1=""a"" unknown2=""b""><append/></fragment></modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         // Each unknown attribute must produce its own Warning diagnostic.
         Assert.Single(fragments);
@@ -405,7 +405,7 @@ public class FragmentParserTests : IDisposable
   <fragment name=""mymod.items"" target=""items""><append/></fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         // The valid fragment is returned even though the modlet attr is unknown.
         Assert.Single(fragments);
@@ -419,7 +419,7 @@ public class FragmentParserTests : IDisposable
     {
         var file = Write("""<modlet><fragment name="mymod.recipes" target="recipes" requires=" a , b  "><append/></fragment></modlet>""");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(diagnostics);
         Assert.Single(fragments);
@@ -432,7 +432,7 @@ public class FragmentParserTests : IDisposable
         // An empty body is allowed — the fragment just contributes nothing to the output.
         var file = Write(@"<modlet><fragment name=""mymod.empty"" target=""items""></fragment></modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(diagnostics);
         Assert.Single(fragments);

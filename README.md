@@ -151,14 +151,23 @@ Source documents can be passed to `build` as explicit file paths, or collected a
 
 ### Source document format
 
-A source document containing two fragments targeting different output files:
+A source document with localization blocks and two fragments targeting different output files:
 
 ```xml
 <modlet>
 
+  <!-- Localization entries: build metadata, not part of final XML. -->
+  <localization key="myItemDesc" file="items" type="Item">
+    <english text="My item description"/>
+    <russian text="Описание моего предмета"/>
+  </localization>
+
+  <!-- Fragments: pure XML patch payloads. -->
   <fragment name="my-mod.items.base" target="items">
     <append xpath="/items">
-      <!-- item definitions go here -->
+      <item name="myItem">
+        <property name="DescriptionKey" value="myItemDesc"/>
+      </item>
     </append>
   </fragment>
 
@@ -319,13 +328,122 @@ The `target` attribute in a fragment file must be one of the values below. Each 
 Known limitations for this phase:
 
 - No `ModInfo.xml` generation.
-- No `Localization.txt` support.
 - Only `*.frag.xml` source format is supported.
 - `target` values not in the table above are hard errors; no custom target extensibility yet.
 
 **Breaking change:** the `--out` option expects a **single mod directory**. Config files are written to `{mod-dir}/Config/`. To build the same sources into two different mods, run `build` twice with different `--out` values. The `hint` attribute on `<modlet>` and `<fragment>` elements and the `--targets` option are no longer supported and will produce errors.
 
 **Breaking change (previous):** source documents must use root element `<modlet>`. The previous root `<fragment>` format is not supported.
+
+## Localization
+
+`modlet-builder` can generate `Config/Localization.txt` alongside your XML config files. Place `<localization>` blocks inside the `<modlet>` root element alongside the fragments they describe. The blocks are build metadata: they are stripped from the generated output and assembled into a single `Config/Localization.txt` in the 7 Days to Die CSV format.
+
+### Localization block format
+
+```xml
+<modlet>
+
+  <!-- file and type are omitted — auto-derived from the <item> element below. -->
+  <localization key="myItemDesc" context="Item description">
+    <english text="A custom item added by the mod."/>
+    <russian text="Мой предмет"/>
+    <german text="Mein Gegenstand"/>
+  </localization>
+
+  <fragment name="mymod.items.base" target="items">
+    <append xpath="/items">
+      <item name="myItem">
+        <property name="DescriptionKey" value="myItemDesc"/>
+      </item>
+    </append>
+  </fragment>
+
+</modlet>
+```
+
+### Localization block attributes
+
+| Attribute | Required | Description |
+| --------- | -------- | ----------- |
+| `key` | Yes | Unique localization key. Must be unique across all fragments in the build; duplicates are a build error. |
+| `file` | No | The `File` column value in `Localization.txt`. Auto-derived from the game object that references this key via `DescriptionKey` (see table below). Provide explicitly for targets where auto-derivation is not supported, or to override the derived value. |
+| `type` | No | The `Type` column value in `Localization.txt`. Auto-derived alongside `file`. Provide explicitly when auto-derivation is not possible. |
+| `context` | No | The `Context / Alternate Text` column value. |
+
+#### `file` and `type` auto-derivation
+
+When `file` and `type` are omitted, the tool scans all fragment bodies for a matching `<property name="DescriptionKey" value="..."/>` and derives both attributes from the parent game object element:
+
+| Parent element | `file` | `type` |
+| -------------- | ------ | ------ |
+| `<item>` | `items` | `Item` |
+| `<block>` | `blocks` | `Block` |
+| `<item_modifier>` | `item_modifiers` | `Mod` |
+
+For all other targets, provide `file` and `type` explicitly. Any string value is accepted; the tool does not restrict the column to the table above.
+| `usedInMainMenu` | No | The `UsedInMainMenu` column value. |
+| `noTranslate` | No | Boolean. `true` or `1` → the `NoTranslate` column in `Localization.txt` contains `x` (7 Days to Die convention for "do not translate this string"). `false`, `0`, or absent (default) → column is left empty. |
+
+#### `noTranslate` examples
+
+Normal translatable entry — `noTranslate` absent, column will be empty:
+
+```xml
+<localization key="myItemDesc" file="items" type="Item">
+  <english text="A custom item added by the mod."/>
+  <russian text="Мой предмет"/>
+</localization>
+```
+
+Proper name that must not be translated — column will contain `x`:
+
+```xml
+<localization key="myModCreatorLabel" file="items" type="Item" noTranslate="true">
+  <english text="Created by YourName"/>
+</localization>
+```
+
+The `x` convention is used in vanilla `Localization.txt` for developer names, memorial plaques, and other strings that should appear as-is in all locales.
+
+### Supported language elements
+
+Each `<localization>` block may contain zero or more of these child elements. Absent languages produce empty CSV cells.
+
+`english`, `german`, `spanish`, `french`, `italian`, `japanese`, `koreana`, `polish`, `brazilian`, `russian`, `turkish`, `schinese`, `tchinese`
+
+Each language element requires a `text` attribute:
+
+```xml
+<english text="My Item"/>
+```
+
+### Output
+
+When any fragment contains at least one `<localization>` block, the build produces:
+
+```text
+{mod-dir}/
+└─ Config/
+   ├─ items.xml
+   └─ Localization.txt
+```
+
+The CSV uses the exact column order from `Localization.txt`:
+
+```text
+Key,File,Type,UsedInMainMenu,NoTranslate,english,Context / Alternate Text,german,...
+```
+
+Row order follows the discovered file order (files sorted deterministically), then source order within each file. Values containing commas, quotes, or newlines are quoted per RFC 4180. The file is UTF-8 without BOM.
+
+### Duplicate key rule
+
+Two `<localization>` blocks with the same `key` across any source documents are a build error. The error message identifies both the duplicate and the first definition location. No output files are written when duplicate keys are detected.
+
+### DescriptionKey linkage rule
+
+Every `<localization>` key must be referenced by at least one `<property name="DescriptionKey" value="..."/>` inside a fragment body in the same build. A localization key that is not linked to any `DescriptionKey` property is a build error. No output files are written.
 
 ## License
 

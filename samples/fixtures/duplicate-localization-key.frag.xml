@@ -1,0 +1,14 @@
+<modlet>
+  <localization key="sharedKey" file="items" type="Item">
+    <english text="First definition"/>
+  </localization>
+  <fragment name="dup.a" target="items">
+    <append/>
+  </fragment>
+  <localization key="sharedKey" file="recipes" type="Item">
+    <english text="Duplicate definition"/>
+  </localization>
+  <fragment name="dup.b" target="recipes" requires="dup.a">
+    <append/>
+  </fragment>
+</modlet>

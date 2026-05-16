@@ -125,3 +125,116 @@ tests:
     expected:
       exit_code: 1
       config_created: false
+
+  - id: localization-sample-golden
+    name: Localization Sample Golden Match
+    description: Build the localization sample and compare the full output (Config/*.xml and Config/Localization.txt) with the checked-in expected files.
+    command:
+      verb: build
+      sources:
+        - samples/golden/localization-sample/src
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 0
+      expected_result_path: samples/golden/localization-sample/expected
+
+  - id: localization-dry-run-no-file
+    name: Localization Dry Run Produces No Localization.txt
+    description: Build a localization source with --dry-run and verify that Config/Localization.txt is not created.
+    command:
+      verb: build
+      sources:
+        - samples/golden/localization-sample/src
+      output: "{tempOut}"
+      dry_run: true
+      verbosity: none
+    expected:
+      exit_code: 0
+      config_created: false
+      missing_paths:
+        - Config/Localization.txt
+
+  - id: localization-clean-removes-stale
+    name: Localization Clean Removes Stale Localization.txt
+    description: Pre-create a stale Localization.txt, run build with --clean, and verify that the stale file is gone and a fresh one is produced.
+    command:
+      verb: build
+      sources:
+        - samples/golden/localization-sample/src
+      output: "{tempOut}"
+      clean: true
+      verbosity: none
+    pre_setup_files:
+      - path: "{tempOut}/Config/Localization.txt"
+        content: "stale content"
+    expected:
+      exit_code: 0
+      expected_result_path: samples/golden/localization-sample/expected
+
+  - id: no-translate-true-golden
+    name: noTranslate=true Produces x in NoTranslate Column
+    description: Build a source fragment with noTranslate="true" and verify that the NoTranslate column in Localization.txt contains "x".
+    command:
+      verb: build
+      sources:
+        - samples/golden/no-translate-true/src
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 0
+      expected_result_path: samples/golden/no-translate-true/expected
+
+  - id: no-translate-false-golden
+    name: noTranslate=false Produces Empty NoTranslate Column
+    description: Build a source fragment with noTranslate="false" and verify that the NoTranslate column in Localization.txt is empty.
+    command:
+      verb: build
+      sources:
+        - samples/golden/no-translate-false/src
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 0
+      expected_result_path: samples/golden/no-translate-false/expected
+
+  - id: localization-duplicate-key-error
+    name: Duplicate Localization Key Returns Error
+    description: Build the duplicate-localization-key fixture and verify that no output is created.
+    command:
+      verb: build
+      sources:
+        - samples/fixtures/duplicate-localization-key.frag.xml
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 1
+      config_created: false
+
+  - id: invalid-orphaned-localization-key
+    name: Orphaned Localization Key Returns Error
+    description: Build a fixture with a localization key not referenced by any DescriptionKey property in any fragment and verify that no Config directory is created.
+    command:
+      verb: build
+      sources:
+        - samples/fixtures/orphaned-localization-key.frag.xml
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 1
+      config_created: false
+
+  - id: description-key-wrong-target-warning
+    name: DescriptionKey on Non-Item-Block Target Produces Warning
+    description: Build a fixture whose fragment targets 'recipes' (a target that does not support DescriptionKey) but contains a DescriptionKey property. The build must succeed (exit 0) and emit a warning that the property will have no effect.
+    command:
+      verb: build
+      sources:
+        - samples/fixtures/description-key-wrong-target.frag.xml
+      output: "{tempOut}"
+      verbosity: warning
+    expected:
+      exit_code: 0
+      config_created: true
+      stdout_contains:
+        - "does not support DescriptionKey"
