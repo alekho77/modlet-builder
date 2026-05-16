@@ -172,6 +172,32 @@ tests:
       exit_code: 0
       expected_result_path: samples/golden/localization-sample/expected
 
+  - id: no-translate-true-golden
+    name: noTranslate=true Produces x in NoTranslate Column
+    description: Build a source fragment with noTranslate="true" and verify that the NoTranslate column in Localization.txt contains "x".
+    command:
+      verb: build
+      sources:
+        - samples/golden/no-translate-true/src
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 0
+      expected_result_path: samples/golden/no-translate-true/expected
+
+  - id: no-translate-false-golden
+    name: noTranslate=false Produces Empty NoTranslate Column
+    description: Build a source fragment with noTranslate="false" and verify that the NoTranslate column in Localization.txt is empty.
+    command:
+      verb: build
+      sources:
+        - samples/golden/no-translate-false/src
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 0
+      expected_result_path: samples/golden/no-translate-false/expected
+
   - id: localization-duplicate-key-error
     name: Duplicate Localization Key Returns Error
     description: Build the duplicate-localization-key fixture and verify that no output is created.

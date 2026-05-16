@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <append xpath="/items">
+      <item name="ntTrueItem">
+        <property name="Extends" value="meleeToolRepairT1ClawHammer" />
+        <property name="DescriptionKey" value="ntTrueItemDesc" />
+      </item>
+    </append>
+</config>
