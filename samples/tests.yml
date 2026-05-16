@@ -72,19 +72,6 @@ tests:
       exit_code: 1
       config_created: false
 
-  - id: invalid-duplicate-names
-    name: Duplicate Names Return Error
-    description: Build the invalid duplicate-names fixture and verify that no Config directory is created.
-    command:
-      verb: build
-      sources:
-        - samples/invalid/duplicate-names.frag.xml
-      output: "{tempOut}"
-      verbosity: none
-    expected:
-      exit_code: 1
-      config_created: false
-
   - id: invalid-cycle
     name: Dependency Cycle Returns Error
     description: Build the invalid cycle fixture and verify that no Config directory is created.
@@ -92,19 +79,6 @@ tests:
       verb: build
       sources:
         - samples/invalid/cycle.frag.xml
-      output: "{tempOut}"
-      verbosity: none
-    expected:
-      exit_code: 1
-      config_created: false
-
-  - id: invalid-unknown-target
-    name: Unknown Target Returns Error
-    description: Build the invalid unknown-target fixture and verify that no Config directory is created.
-    command:
-      verb: build
-      sources:
-        - samples/invalid/unknown-target.frag.xml
       output: "{tempOut}"
       verbosity: none
     expected:

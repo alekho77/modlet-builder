@@ -143,9 +143,7 @@ failing the build.
 | File | Behavior demonstrated |
 | ---- | --------------------- |
 | `missing-dependency.frag.xml` | `requires` references a fragment that does not exist |
-| `duplicate-names.frag.xml` | two fragments share the same `name` |
 | `cycle.frag.xml` | two fragments form a circular `requires` dependency |
-| `unknown-target.frag.xml` | `target` value is not in the known target list |
 | `hint-attribute.frag.xml` | unsupported `hint` attribute triggers a warning, but the build still succeeds |
 | `malformed.frag.xml` | XML is not well-formed |
 
