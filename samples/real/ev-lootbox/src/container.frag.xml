@@ -1,0 +1,27 @@
+<modlet>
+  <!--
+    EV_LootBox — category selector and loot container.
+    Selects exactly one reward pool: 75% Simple, 20% Good, 5% Valuable.
+    Source: EV_LootBox by Aleksei Khozin
+  -->
+  <fragment target="loot" requires="ev.lootbox.loot.reward-pools">
+    <append xpath="/lootcontainers">
+      <lootgroup name="evLootBoxCategorySelector" count="1">
+        <item group="evLootBoxSimplePool"   prob="75"/>
+        <item group="evLootBoxGoodPool"     prob="20"/>
+        <item group="evLootBoxValuablePool" prob="5"/>
+      </lootgroup>
+      <lootcontainer name="evLootBoxRewards"
+                     count="1"
+                     size="3,2"
+                     sound_open="SupplyDrops/open_supply_crate"
+                     sound_close="SupplyDrops/close_supply_crate"
+                     loot_quality_template="qualBaseTemplate"
+                     destroy_on_close="empty"
+                     unique_item="true"
+                     ignore_loot_abundance="true">
+        <item group="evLootBoxCategorySelector"/>
+      </lootcontainer>
+    </append>
+  </fragment>
+</modlet>

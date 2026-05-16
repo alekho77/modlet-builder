@@ -1,0 +1,26 @@
+<modlet>
+  <!--
+    EV_LootBox — reward category pools.
+    Each pool aggregates matching food and drink groups.
+    Source: EV_LootBox by Aleksei Khozin
+  -->
+  <fragment name="ev.lootbox.loot.reward-pools" target="loot" requires="ev.lootbox.loot.drink-groups, ev.lootbox.loot.food-groups">
+    <append xpath="/lootcontainers">
+      <lootgroup name="evLootBoxSimplePool" count="all">
+        <item group="evLootBoxFoodSimple"/>
+        <item group="evLootBoxDrinkSimple"/>
+        <item name="ammo9mmBulletBall" count="50,100"/>
+      </lootgroup>
+      <lootgroup name="evLootBoxGoodPool" count="all">
+        <item group="evLootBoxFoodGood"/>
+        <item group="evLootBoxDrinkGood"/>
+        <item name="medicalFirstAidKit" count="1,2"/>
+      </lootgroup>
+      <lootgroup name="evLootBoxValuablePool" count="all">
+        <item group="evLootBoxFoodValuable"/>
+        <item group="evLootBoxDrinkValuable"/>
+        <item name="resourceRepairKit" count="3,5"/>
+      </lootgroup>
+    </append>
+  </fragment>
+</modlet>

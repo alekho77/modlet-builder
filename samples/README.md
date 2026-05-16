@@ -12,6 +12,9 @@ samples/
 │   ├── alloy-motor-tool-parts/
 │   │   ├── src/             — *.frag.xml source documents
 │   │   └── expected/Config/ — expected generated Config files
+│   └── ev-lootbox/
+│       ├── src/             — *.frag.xml source documents
+│       └── expected/Config/ — expected generated Config files
 └── invalid/                 — fragment files that intentionally trigger build errors
     ├── missing-dependency.frag.xml
     ├── duplicate-names.frag.xml
@@ -120,6 +123,15 @@ unlock from a straightforward single-mod source set.
 
 Demonstrates: multiple output targets from one source set.
 All fragments are unnamed because nothing depends on them by public name.
+
+### ev-lootbox
+
+A four-fragment example split across four files: drink loot groups, food loot groups,
+reward category pools (referencing both group files via `requires`), and an unnamed
+category selector with loot container (referencing pools via `requires`).
+
+Demonstrates: named cross-file `requires` dependencies and multi-level dependency
+ordering within a single output target (`loot.xml`).
 
 ## Invalid samples
 

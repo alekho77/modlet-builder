@@ -1,0 +1,23 @@
+<modlet>
+  <!--
+    EV_LootBox — food loot groups by quality tier.
+    Source: EV_LootBox by Aleksei Khozin
+  -->
+  <fragment name="ev.lootbox.loot.food-groups" target="loot">
+    <append xpath="/lootcontainers">
+      <lootgroup name="evLootBoxFoodSimple" count="1">
+        <item name="foodCanBeef"      count="3,5"/>
+        <item name="foodCanChicken"   count="4,6"/>
+        <item name="foodBaconAndEggs" count="2,4"/>
+      </lootgroup>
+      <lootgroup name="evLootBoxFoodGood" count="1">
+        <item name="foodMeatStew"       count="2,4"/>
+        <item name="foodSteakAndPotato" count="1,3"/>
+      </lootgroup>
+      <lootgroup name="evLootBoxFoodValuable" count="1">
+        <item name="foodHoneyGlazedSham" count="1,3"/>
+        <item name="foodHoneyBrisket"    count="1,3"/>
+      </lootgroup>
+    </append>
+  </fragment>
+</modlet>

@@ -46,35 +46,18 @@ tests:
       missing_paths:
         - Config/stale.xml
 
-  - id: unnamed-fragment-with-requires-build-success
-    name: Unnamed Fragment With Requires Build Success
-    description: Create a named dependency fragment and an unnamed fragment that requires it, then verify that both output files are created.
+  - id: ev-lootbox-golden
+    name: EV LootBox Golden Match
+    description: Build the EV LootBox sample with cross-file lootgroup dependencies and compare the output with the checked-in expected files. Verifies that named fragments across separate files are resolved and ordered correctly by requires.
     command:
       verb: build
       sources:
-        - "{tempSrc}"
-      output: "{tempOut}/unnamed-requires-out"
+        - samples/real/ev-lootbox/src
+      output: "{tempOut}"
       verbosity: none
-    inline_setup_files:
-      - path: "{tempSrc}/items.frag.xml"
-        content: |
-          <modlet>
-            <fragment name="test.items.base" target="items">
-              <append xpath="/items"><item name="testItem"/></append>
-            </fragment>
-          </modlet>
-      - path: "{tempSrc}/recipes.frag.xml"
-        content: |
-          <modlet>
-            <fragment target="recipes" requires="test.items.base">
-              <append xpath="/recipes"><recipe name="testItem" count="1"/></append>
-            </fragment>
-          </modlet>
     expected:
       exit_code: 0
-      existing_paths:
-        - Config/items.xml
-        - Config/recipes.xml
+      expected_result_path: samples/real/ev-lootbox/expected
 
   - id: invalid-missing-dependency
     name: Missing Dependency Returns Error
