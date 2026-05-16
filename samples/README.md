@@ -8,25 +8,23 @@ The samples are used both as documentation and as test fixtures for verifying de
 ```text
 samples/
 ├── tests.yml                — YAML registry of sample-driven golden and integration test cases
-├── real/                    — working mod excerpts compiled from real Nexus-published mods
+├── golden/                  — curated mod excerpts with checked-in expected output for golden comparison
 │   ├── alloy-motor-tool-parts/
 │   │   ├── src/             — *.frag.xml source documents
 │   │   └── expected/Config/ — expected generated Config files
 │   └── ev-lootbox/
 │       ├── src/             — *.frag.xml source documents
 │       └── expected/Config/ — expected generated Config files
-└── invalid/                 — fragment files that intentionally trigger build errors
+└── fixtures/                — short test fragments for error, warning, and diagnostic scenarios
     ├── missing-dependency.frag.xml
-    ├── duplicate-names.frag.xml
     ├── cycle.frag.xml
-    ├── unknown-target.frag.xml
     ├── hint-attribute.frag.xml
     └── malformed.frag.xml
 ```
 
-## Real samples
+## Golden samples
 
-All real samples are original works by **Aleksei Khozin** published under the
+All golden samples are original works by **Aleksei Khozin** published under the
 [EpicVales](https://github.com/aclist) community mod series for *7 Days to Die*.
 They are included here as curated representative excerpts to demonstrate real-world
 fragment patterns and verify the full build pipeline end-to-end.
@@ -55,7 +53,7 @@ test methods.
 
 Path values in the YAML file follow these rules:
 
-- Repository fixtures use repo-relative paths such as `samples/real/...`.
+- Repository fixtures use repo-relative paths such as `samples/golden/...`.
 - Temporary paths use tokens such as `{tempSrc}` and `{tempOut}`.
 - Expected golden output directories are referenced through `expected_result_path`.
 
@@ -133,12 +131,12 @@ category selector with loot container (referencing pools via `requires`).
 Demonstrates: named cross-file `requires` dependencies and multi-level dependency
 ordering within a single output target (`loot.xml`).
 
-## Invalid samples
+## Fixture samples
 
-Files in `samples/invalid/` demonstrate invalid or legacy source metadata. They
-are used by `CommandLineIntegrationTests` to verify that the tool either rejects
-invalid input with exit code 1 or reports warning-only legacy metadata without
-failing the build.
+Files in `samples/fixtures/` are short single-purpose fragments used by
+`CommandLineIntegrationTests`. They cover error cases (exit code 1, no output),
+warning-only cases (build succeeds with diagnostics), and other edge-case
+behaviour that does not require golden output comparison.
 
 | File | Behavior demonstrated |
 | ---- | --------------------- |
@@ -152,7 +150,7 @@ failing the build.
 To regenerate all expected output after a behaviour change:
 
 ```bash
-modlet-builder build --src samples/real/alloy-motor-tool-parts/src --out samples/real/alloy-motor-tool-parts/expected --clean
+modlet-builder build --src samples/golden/alloy-motor-tool-parts/src --out samples/golden/alloy-motor-tool-parts/expected --clean
 ```
 
 After regenerating, run the tests to confirm all golden assertions still pass.

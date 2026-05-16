@@ -5,12 +5,12 @@ tests:
     command:
       verb: build
       sources:
-        - samples/real/alloy-motor-tool-parts/src
+        - samples/golden/alloy-motor-tool-parts/src
       output: "{tempOut}"
       verbosity: none
     expected:
       exit_code: 0
-      expected_result_path: samples/real/alloy-motor-tool-parts/expected
+      expected_result_path: samples/golden/alloy-motor-tool-parts/expected
 
   - id: alloy-dry-run-no-output
     name: Alloy Sample Dry Run
@@ -18,7 +18,7 @@ tests:
     command:
       verb: build
       sources:
-        - samples/real/alloy-motor-tool-parts/src
+        - samples/golden/alloy-motor-tool-parts/src
       output: "{tempOut}"
       dry_run: true
       verbosity: none
@@ -32,7 +32,7 @@ tests:
     command:
       verb: build
       sources:
-        - samples/real/alloy-motor-tool-parts/src
+        - samples/golden/alloy-motor-tool-parts/src
       output: "{tempOut}"
       clean: true
       verbosity: none
@@ -52,12 +52,12 @@ tests:
     command:
       verb: build
       sources:
-        - samples/real/ev-lootbox/src
+        - samples/golden/ev-lootbox/src
       output: "{tempOut}"
       verbosity: none
     expected:
       exit_code: 0
-      expected_result_path: samples/real/ev-lootbox/expected
+      expected_result_path: samples/golden/ev-lootbox/expected
 
   - id: invalid-missing-dependency
     name: Missing Dependency Returns Error
@@ -65,7 +65,7 @@ tests:
     command:
       verb: build
       sources:
-        - samples/invalid/missing-dependency.frag.xml
+        - samples/fixtures/missing-dependency.frag.xml
       output: "{tempOut}"
       verbosity: none
     expected:
@@ -78,7 +78,7 @@ tests:
     command:
       verb: build
       sources:
-        - samples/invalid/cycle.frag.xml
+        - samples/fixtures/cycle.frag.xml
       output: "{tempOut}"
       verbosity: none
     expected:
@@ -91,7 +91,7 @@ tests:
     command:
       verb: build
       sources:
-        - samples/invalid/hint-attribute.frag.xml
+        - samples/fixtures/hint-attribute.frag.xml
       output: "{tempOut}"
       verbosity: none
     expected:
@@ -104,7 +104,7 @@ tests:
     command:
       verb: build
       sources:
-        - samples/invalid/malformed.frag.xml
+        - samples/fixtures/malformed.frag.xml
       output: "{tempOut}"
       verbosity: none
     expected:
