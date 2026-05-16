@@ -1,0 +1,15 @@
+<modlet>
+  <!--
+    Fragment targeting 'recipes', which does not support DescriptionKey.
+    Expected: build succeeds (exit 0) with a warning that DescriptionKey has
+    no effect on the 'recipes' target.
+  -->
+  <fragment name="test.recipes.bad-description-key" target="recipes">
+    <append xpath="/recipes">
+      <recipe name="testRecipe" count="1">
+        <property name="DescriptionKey" value="testRecipeDesc"/>
+        <ingredient name="resourceWood" count="5"/>
+      </recipe>
+    </append>
+  </fragment>
+</modlet>

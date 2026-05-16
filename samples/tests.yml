@@ -198,3 +198,18 @@ tests:
     expected:
       exit_code: 1
       config_created: false
+
+  - id: description-key-wrong-target-warning
+    name: DescriptionKey on Non-Item-Block Target Produces Warning
+    description: Build a fixture whose fragment targets 'recipes' (a target that does not support DescriptionKey) but contains a DescriptionKey property. The build must succeed (exit 0) and emit a warning that the property will have no effect.
+    command:
+      verb: build
+      sources:
+        - samples/fixtures/description-key-wrong-target.frag.xml
+      output: "{tempOut}"
+      verbosity: warning
+    expected:
+      exit_code: 0
+      config_created: true
+      stdout_contains:
+        - "does not support DescriptionKey"

@@ -108,6 +108,9 @@ internal static class CommandLine
         var orphanedDiagnostics = LocalizationValidator.ValidateOrphanedLocalizationKeys(localizationEntries, ordered);
         allDiagnostics.AddRange(orphanedDiagnostics);
 
+        var descKeyTargetDiagnostics = LocalizationValidator.ValidateDescriptionKeyTargets(ordered);
+        allDiagnostics.AddRange(descKeyTargetDiagnostics);
+
         if (HasErrors(allDiagnostics))
         {
             EmitDiagnostics(allDiagnostics, logger);

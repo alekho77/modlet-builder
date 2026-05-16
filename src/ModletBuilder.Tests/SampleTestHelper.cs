@@ -26,18 +26,21 @@ internal static class SampleTestHelper
     }
 
     /// <summary>
-    /// Runs <see cref="CommandLine.Run"/> with stdout and stderr redirected to
-    /// <see cref="TextWriter.Null"/> so that test runner output stays clean.
+    /// Runs <see cref="CommandLine.Run"/> and captures stdout and stderr,
+    /// returning the exit code together with the captured output.
     /// </summary>
-    internal static int RunBuildSuppressed(string[] args)
+    internal static (int ExitCode, string Stdout, string Stderr) RunBuildCapturing(string[] args)
     {
         var prevOut = Console.Out;
         var prevErr = Console.Error;
-        Console.SetOut(TextWriter.Null);
-        Console.SetError(TextWriter.Null);
+        var stdoutCapture = new StringWriter();
+        var stderrCapture = new StringWriter();
+        Console.SetOut(stdoutCapture);
+        Console.SetError(stderrCapture);
         try
         {
-            return CommandLine.Run(args);
+            var exitCode = CommandLine.Run(args);
+            return (exitCode, stdoutCapture.ToString(), stderrCapture.ToString());
         }
         finally
         {
@@ -45,6 +48,12 @@ internal static class SampleTestHelper
             Console.SetError(prevErr);
         }
     }
+
+    /// <summary>
+    /// Runs <see cref="CommandLine.Run"/> with stdout and stderr suppressed.
+    /// Use <see cref="RunBuildCapturing"/> when output assertions are needed.
+    /// </summary>
+    internal static int RunBuildSuppressed(string[] args) => RunBuildCapturing(args).ExitCode;
 
     internal static IEnumerable<object[]> GetGoldenCases() =>
         CachedTestCases.Value
@@ -147,10 +156,13 @@ internal static class SampleTestHelper
     private static void ExecuteSingleRunCase(SampleTestCase testCase, SampleExecutionContext context)
     {
         var outputPath = ResolvePathToken(testCase.Command.Output, context);
-        var exitCode = RunBuildSuppressed(BuildArgs(testCase.Command, context));
+        var (exitCode, stdout, _) = RunBuildCapturing(BuildArgs(testCase.Command, context));
 
         Assert.Equal(testCase.Expected.ExitCode, exitCode);
         AssertExpectedFilesystemState(outputPath, testCase.Expected, context);
+
+        foreach (var expected in testCase.Expected.StdoutContains)
+            Assert.Contains(expected, stdout, StringComparison.Ordinal);
     }
 
     private static void AssertExpectedFilesystemState(
@@ -324,6 +336,12 @@ public sealed class SampleExpectedResult
     public List<string> ExistingPaths { get; set; } = [];
 
     public List<string> MissingPaths { get; set; } = [];
+
+    /// <summary>
+    /// Substrings that must appear somewhere in the captured stdout of the build run.
+    /// Useful for asserting that specific warning or informational messages were emitted.
+    /// </summary>
+    public List<string> StdoutContains { get; set; } = [];
 }
 
 public sealed class SampleFileSpec
