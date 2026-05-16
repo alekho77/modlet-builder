@@ -344,8 +344,8 @@ Known limitations for this phase:
 ```xml
 <modlet>
 
-  <localization key="myItemDesc" file="items" type="Item"
-    context="Item description">
+  <!-- file and type are omitted — auto-derived from the <item> element below. -->
+  <localization key="myItemDesc" context="Item description">
     <english text="A custom item added by the mod."/>
     <russian text="Мой предмет"/>
     <german text="Mein Gegenstand"/>
@@ -367,9 +367,21 @@ Known limitations for this phase:
 | Attribute | Required | Description |
 | --------- | -------- | ----------- |
 | `key` | Yes | Unique localization key. Must be unique across all fragments in the build; duplicates are a build error. |
-| `file` | Yes | The `File` column value in `Localization.txt`. Typically matches the fragment's `target`. |
-| `type` | Yes | The `Type` column value in `Localization.txt` (e.g. `Item`, `Block`). |
+| `file` | No | The `File` column value in `Localization.txt`. Auto-derived from the game object that references this key via `DescriptionKey` (see table below). Provide explicitly for targets where auto-derivation is not supported, or to override the derived value. |
+| `type` | No | The `Type` column value in `Localization.txt`. Auto-derived alongside `file`. Provide explicitly when auto-derivation is not possible. |
 | `context` | No | The `Context / Alternate Text` column value. |
+
+#### `file` and `type` auto-derivation
+
+When `file` and `type` are omitted, the tool scans all fragment bodies for a matching `<property name="DescriptionKey" value="..."/>` and derives both attributes from the parent game object element:
+
+| Parent element | `file` | `type` |
+| -------------- | ------ | ------ |
+| `<item>` | `items` | `Item` |
+| `<block>` | `blocks` | `Block` |
+| `<item_modifier>` | `item_modifiers` | `Mod` |
+
+For all other targets, provide `file` and `type` explicitly. Any string value is accepted; the tool does not restrict the column to the table above.
 | `usedInMainMenu` | No | The `UsedInMainMenu` column value. |
 | `noTranslate` | No | Boolean. `true` or `1` → the `NoTranslate` column in `Localization.txt` contains `x` (7 Days to Die convention for "do not translate this string"). `false`, `0`, or absent (default) → column is left empty. |
 
