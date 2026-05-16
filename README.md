@@ -151,14 +151,23 @@ Source documents can be passed to `build` as explicit file paths, or collected a
 
 ### Source document format
 
-A source document containing two fragments targeting different output files:
+A source document with localization blocks and two fragments targeting different output files:
 
 ```xml
 <modlet>
 
+  <!-- Localization entries: build metadata, not part of final XML. -->
+  <localization key="myItemDesc" file="items" type="Item">
+    <english text="My item description"/>
+    <russian text="Описание моего предмета"/>
+  </localization>
+
+  <!-- Fragments: pure XML patch payloads. -->
   <fragment name="my-mod.items.base" target="items">
     <append xpath="/items">
-      <!-- item definitions go here -->
+      <item name="myItem">
+        <property name="DescriptionKey" value="myItemDesc"/>
+      </item>
     </append>
   </fragment>
 
