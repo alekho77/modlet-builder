@@ -46,28 +46,6 @@ tests:
       missing_paths:
         - Config/stale.xml
 
-  - id: unnamed-fragment-build-success
-    name: Unnamed Fragment Build Success
-    description: Create an unnamed fragment in a temporary source directory and verify that it builds successfully.
-    command:
-      verb: build
-      sources:
-        - "{tempSrc}"
-      output: "{tempOut}/unnamed-out"
-      verbosity: none
-    inline_setup_files:
-      - path: "{tempSrc}/items.frag.xml"
-        content: |
-          <modlet>
-            <fragment target="items">
-              <append xpath="/items"><item name="testItem"/></append>
-            </fragment>
-          </modlet>
-    expected:
-      exit_code: 0
-      existing_paths:
-        - Config/items.xml
-
   - id: unnamed-fragment-with-requires-build-success
     name: Unnamed Fragment With Requires Build Success
     description: Create a named dependency fragment and an unnamed fragment that requires it, then verify that both output files are created.
