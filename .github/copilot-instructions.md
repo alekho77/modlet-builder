@@ -149,6 +149,14 @@ When implementing these concepts:
   - **generated output format** written for the target mod/game
 - Build-only metadata must not leak into final generated XML unless explicitly intended.
 
+### Fragment Payload Purity
+
+- Treat the contents of `<fragment>` as pure emitted XML payload.
+- The child nodes inside a fragment should map 1:1, in order, to the nodes written into the generated target file.
+- Do not place build-only helper elements, metadata blocks, or synthetic wrapper nodes inside `<fragment>`.
+- If a feature needs build-time metadata that is not meant to appear in the generated XML, define it outside the fragment payload or in a separate explicitly documented source-level construct.
+- If existing code or samples violate this rule, treat that as design debt to correct rather than a precedent to extend.
+
 ### Ordering
 
 - Fragment ordering is determined solely by `requires` dependency declarations.
