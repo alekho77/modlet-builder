@@ -371,7 +371,28 @@ Known limitations for this phase:
 | `type` | Yes | The `Type` column value in `Localization.txt` (e.g. `Item`, `Block`). |
 | `context` | No | The `Context / Alternate Text` column value. |
 | `usedInMainMenu` | No | The `UsedInMainMenu` column value. |
-| `noTranslate` | No | The `NoTranslate` column value. |
+| `noTranslate` | No | Boolean. `true` or `1` → the `NoTranslate` column in `Localization.txt` contains `x` (7 Days to Die convention for "do not translate this string"). `false`, `0`, or absent (default) → column is left empty. |
+
+#### `noTranslate` examples
+
+Normal translatable entry — `noTranslate` absent, column will be empty:
+
+```xml
+<localization key="myItemDesc" file="items" type="Item">
+  <english text="A custom item added by the mod."/>
+  <russian text="Мой предмет"/>
+</localization>
+```
+
+Proper name that must not be translated — column will contain `x`:
+
+```xml
+<localization key="myModCreatorLabel" file="items" type="Item" noTranslate="true">
+  <english text="Created by YourName"/>
+</localization>
+```
+
+The `x` convention is used in vanilla `Localization.txt` for developer names, memorial plaques, and other strings that should appear as-is in all locales.
 
 ### Supported language elements
 

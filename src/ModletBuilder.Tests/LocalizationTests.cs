@@ -234,7 +234,7 @@ public class LocalizationTests : IDisposable
     {
         var file = Write(@"
 <modlet>
-  <localization key=""k"" file=""items"" type=""Item"" context=""hint"" usedInMainMenu=""True"" noTranslate=""False"">
+  <localization key=""k"" file=""items"" type=""Item"" context=""hint"" usedInMainMenu=""True"" noTranslate=""false"">
     <english text=""x""/>
   </localization>
   <fragment target=""items""><append/></fragment>
@@ -246,7 +246,102 @@ public class LocalizationTests : IDisposable
         var entry = localizationEntries[0];
         Assert.Equal("hint", entry.Context);
         Assert.Equal("True", entry.UsedInMainMenu);
-        Assert.Equal("False", entry.NoTranslate);
+        Assert.Equal(string.Empty, entry.NoTranslate);
+    }
+
+    [Theory]
+    [InlineData("true")]
+    [InlineData("True")]
+    [InlineData("TRUE")]
+    [InlineData("1")]
+    public void NoTranslate_true_values_produce_x(string value)
+    {
+        var file = Write($@"
+<modlet>
+  <localization key=""k"" file=""items"" type=""Item"" noTranslate=""{value}"">
+    <english text=""hi""/>
+  </localization>
+  <fragment target=""items""><append/></fragment>
+</modlet>");
+
+        var (_, localizationEntries, diagnostics) = FragmentParser.Parse(file);
+
+        Assert.Empty(diagnostics);
+        Assert.Equal("x", localizationEntries[0].NoTranslate);
+    }
+
+    [Theory]
+    [InlineData("false")]
+    [InlineData("False")]
+    [InlineData("FALSE")]
+    [InlineData("0")]
+    public void NoTranslate_false_values_produce_empty(string value)
+    {
+        var file = Write($@"
+<modlet>
+  <localization key=""k"" file=""items"" type=""Item"" noTranslate=""{value}"">
+    <english text=""hi""/>
+  </localization>
+  <fragment target=""items""><append/></fragment>
+</modlet>");
+
+        var (_, localizationEntries, diagnostics) = FragmentParser.Parse(file);
+
+        Assert.Empty(diagnostics);
+        Assert.Equal(string.Empty, localizationEntries[0].NoTranslate);
+    }
+
+    [Fact]
+    public void NoTranslate_absent_defaults_to_empty()
+    {
+        var file = Write(@"
+<modlet>
+  <localization key=""k"" file=""items"" type=""Item"">
+    <english text=""hi""/>
+  </localization>
+  <fragment target=""items""><append/></fragment>
+</modlet>");
+
+        var (_, localizationEntries, diagnostics) = FragmentParser.Parse(file);
+
+        Assert.Empty(diagnostics);
+        Assert.Equal(string.Empty, localizationEntries[0].NoTranslate);
+    }
+
+    [Fact]
+    public void NoTranslate_invalid_value_produces_error()
+    {
+        var file = Write(@"
+<modlet>
+  <localization key=""k"" file=""items"" type=""Item"" noTranslate=""yes"">
+    <english text=""hi""/>
+  </localization>
+  <fragment target=""items""><append/></fragment>
+</modlet>");
+
+        var (_, _, diagnostics) = FragmentParser.Parse(file);
+
+        Assert.Contains(diagnostics, d =>
+            d.Severity == DiagnosticSeverity.Error && d.Message.Contains("'yes'"));
+    }
+
+    [Fact]
+    public void NoTranslate_true_produces_x_in_csv_row()
+    {
+        var file = Write(@"
+<modlet>
+  <localization key=""k"" file=""items"" type=""Item"" noTranslate=""true"">
+    <english text=""hi""/>
+  </localization>
+  <fragment target=""items""><append/></fragment>
+</modlet>");
+
+        var (_, localizationEntries, _) = FragmentParser.Parse(file);
+        var row = LocalizationGenerator.ToCsvRow(localizationEntries[0]);
+        var columns = row.Split(',');
+
+        // NoTranslate is column index 4
+        Assert.Equal("x", columns[4]);
     }
 
     [Fact]

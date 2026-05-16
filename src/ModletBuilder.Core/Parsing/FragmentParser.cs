@@ -188,7 +188,30 @@ internal static class FragmentParser
                 "Localization block is missing required attribute 'key'.", filePath));
 
         var usedInMainMenu = el.Attribute("usedInMainMenu")?.Value ?? string.Empty;
-        var noTranslate = el.Attribute("noTranslate")?.Value ?? string.Empty;
+
+        var noTranslateRaw = el.Attribute("noTranslate")?.Value;
+        string noTranslate;
+        if (noTranslateRaw is null)
+        {
+            noTranslate = string.Empty;
+        }
+        else if (noTranslateRaw.Equals("true", StringComparison.OrdinalIgnoreCase) || noTranslateRaw == "1")
+        {
+            noTranslate = "x";
+        }
+        else if (noTranslateRaw.Equals("false", StringComparison.OrdinalIgnoreCase) || noTranslateRaw == "0")
+        {
+            noTranslate = string.Empty;
+        }
+        else
+        {
+            diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
+                $"Invalid value '{noTranslateRaw}' for attribute 'noTranslate' on " +
+                $"<localization key=\"{key ?? "?"}\">. Expected: true, false, 1, or 0.",
+                filePath));
+            noTranslate = string.Empty;
+        }
+
         var context = el.Attribute("context")?.Value ?? string.Empty;
 
         var knownAttribs = new HashSet<string>(StringComparer.Ordinal)
