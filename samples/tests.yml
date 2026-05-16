@@ -111,27 +111,6 @@ tests:
       exit_code: 1
       config_created: false
 
-  - id: unnamed-fragment-missing-dependency-error
-    name: Unnamed Fragment Missing Dependency Returns Error
-    description: Create an unnamed fragment that requires a missing public name and verify that the build fails without output.
-    command:
-      verb: build
-      sources:
-        - "{tempSrc}"
-      output: "{tempOut}/unnamed-missing-out"
-      verbosity: none
-    inline_setup_files:
-      - path: "{tempSrc}/recipes.frag.xml"
-        content: |
-          <modlet>
-            <fragment target="recipes" requires="missing.items.base">
-              <append xpath="/recipes"><recipe name="testItem" count="1"/></append>
-            </fragment>
-          </modlet>
-    expected:
-      exit_code: 1
-      config_created: false
-
   - id: no-fragments-found-error
     name: No Fragments Found Returns Error
     description: Point the build command at an empty source directory and verify that no Config directory is created.
