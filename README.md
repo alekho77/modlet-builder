@@ -2,126 +2,138 @@
 
 A build tool for assembling modlets and XML patch fragments into final mod output, designed first for **7 Days to Die**.
 
-## What It Does
-
 `modlet-builder` reads modular XML source fragments, resolves their ordering and routing metadata, and generates final game-ready config files deterministically.
 
 Instead of managing dozens of separate modlets with unpredictable load order, you write small focused fragment files. The tool assembles them into a single vanilla-compatible mod output with explicit, reproducible ordering.
 
-**Input** — developer-friendly source fragments:
+## Quick Start for Modders
 
-```xml
-<fragment name="my-mod.items.base" target="items">
-  <append xpath="/items">
-    <!-- item definitions -->
-  </append>
-</fragment>
+1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) matching the version in [global.json](global.json).
+2. Clone the repository:
 
-<fragment name="my-mod.recipes.base" target="recipes" requires="my-mod.items.base">
-  <append xpath="/recipes">
-    <!-- recipe definitions -->
-  </append>
-</fragment>
-```
+   ```bash
+   git clone https://github.com/yourusername/modlet-builder.git
+   cd modlet-builder
+   ```
 
-**Output** — vanilla-compatible XML files ready to drop into your `Mods/` folder:
+3. Publish a self-contained single-file executable to the folder of your choice.
+   Replace `C:\Tools\modlet-builder` with whatever path you want the binary in:
 
-```text
-Config/
-  items.xml
-  recipes.xml
-  blocks.xml
-  buffs.xml
-  ...
-```
+   **Windows (x64):**
 
-Build-only metadata (`name`, `target`, `requires`) is stripped from all generated files.
+   ```bash
+   dotnet publish src/ModletBuilder.Cli -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o C:\Tools\modlet-builder
+   ```
 
-## Who It Is For
+   **Linux (x64):**
 
-- 7 Days to Die mod authors building large or complex mods
-- Modpack authors who want deterministic, reproducible XML assembly
-- Anyone who manages XML patch fragments across multiple source files and needs reliable merge ordering
+   ```bash
+   dotnet publish src/ModletBuilder.Cli -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -o ~/tools/modlet-builder
+   ```
 
-## Terminology
+   **macOS (arm64):**
 
-| Term | Meaning |
-| ---- | ------- |
-| **fragment** | A single `<fragment>` element in a source file, containing XML operations for one target config |
-| **name** | Required unique identifier of a fragment (e.g. `my-mod.items.base`); used as a reference target for `requires` |
-| **target** | Required. The output config file a fragment contributes to. Must be one of the known target values (see below) |
-| **requires** | Optional. Comma-separated list of `name` values this fragment depends on; the tool ensures dependents are placed after their dependencies |
+   ```bash
+   dotnet publish src/ModletBuilder.Cli -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -o ~/tools/modlet-builder
+   ```
 
-### Known `target` Values
+   This produces a single `modlet-builder` (or `modlet-builder.exe` on Windows) file.
+   No .NET runtime is required on the machine where you run the tool.
 
-| Value | Game config file | Notes |
-| ----- | ---------------- | ----- |
-| `items` | `Data/Config/items.xml` | Weapons, tools, consumables, resources, ammo |
-| `blocks` | `Data/Config/blocks.xml` | Placeable blocks: terrain, structures, doors, traps |
-| `recipes` | `Data/Config/recipes.xml` | Crafting recipes |
-| `loot` | `Data/Config/loot.xml` | Loot containers and probability tables |
-| `entityclasses` | `Data/Config/entityclasses.xml` | Zombie, animal, NPC class definitions |
-| `entitygroups` | `Data/Config/entitygroups.xml` | Named entity groups for gamestage spawning |
-| `buffs` | `Data/Config/buffs.xml` | Buffs, debuffs, status effects |
-| `progression` | `Data/Config/progression.xml` | Skills, perks, attributes, level scaling |
-| `gamestages` | `Data/Config/gamestages.xml` | Horde night wave definitions |
-| `spawning` | `Data/Config/spawning.xml` | Biome and zone spawning rules |
-| `traders` | `Data/Config/traders.xml` | Trader inventories and quest offerings |
-| `vehicles` | `Data/Config/vehicles.xml` | Vehicle definitions and properties |
-| `item_modifiers` | `Data/Config/item_modifiers.xml` | Weapon/tool mod attachments |
-| `quests` | `Data/Config/quests.xml` | Quest definitions and reward tables |
-| `biomes` | `Data/Config/biomes.xml` | Biome definitions |
-| `sounds` | `Data/Config/sounds.xml` | Sound event mappings |
-| `materials` | `Data/Config/materials.xml` | Block material properties |
-| `shapes` | `Data/Config/shapes.xml` | Block shape definitions |
-| `qualityinfo` | `Data/Config/qualityinfo.xml` | Item quality tiers and stat scaling |
-| `worldglobal` | `Data/Config/worldglobal.xml` | Global world settings |
-| `weathersurvival` | `Data/Config/weathersurvival.xml` | Weather effects on player survival |
-| `painting` | `Data/Config/painting.xml` | Block painting textures catalogue |
-| `nav_objects` | `Data/Config/nav_objects.xml` | Minimap/compass navigation icons |
-| `archetypes` | `Data/Config/archetypes.xml` | Entity archetypes (base templates) |
-| `dialogs` | `Data/Config/dialogs.xml` | NPC dialog trees |
-| `npc` | `Data/Config/npc.xml` | NPC-specific settings |
-| `challenges` | `Data/Config/challenges.xml` | In-game challenges and objectives |
-| `events` | `Data/Config/events.xml` | Game event trigger definitions |
-| `gameevents` | `Data/Config/gameevents.xml` | Game event response/action definitions |
-| `rwgmixer` | `Data/Config/rwgmixer.xml` | Random World Generation recipe |
-| `utilityai` | `Data/Config/utilityai.xml` | AI utility scoring and behaviour trees |
-| `misc` | `Data/Config/misc.xml` | Miscellaneous global game variables |
-| `physicsbodies` | `Data/Config/physicsbodies.xml` | Ragdoll/physics body definitions |
-| `ui_display` | `Data/Config/ui_display.xml` | Stat/property display labels for UI |
-| `music` | `Data/Config/music.xml` | Background music event mappings |
-| `subtitles` | `Data/Config/subtitles.xml` | Subtitle entries for audio events |
-| `dmscontent` | `Data/Config/dmscontent.xml` | Dynamic Music System configuration |
-| `twitch` | `Data/Config/twitch.xml` | Twitch integration configuration |
-| `twitch_events` | `Data/Config/twitch_events.xml` | Twitch integration event definitions |
-| `videos` | `Data/Config/videos.xml` | Intro/cutscene video references |
-| `loadingscreen` | `Data/Config/loadingscreen.xml` | Loading screen tip text |
-| `blockplaceholders` | `Data/Config/blockplaceholders.xml` | Block placeholder substitution rules |
-| `xui_windows` | `Data/Config/XUi/windows.xml` | In-game HUD windows |
-| `xui_controls` | `Data/Config/XUi/controls.xml` | Reusable HUD UI components |
-| `xui_styles` | `Data/Config/XUi/styles.xml` | HUD UI styles |
-| `xui_menu_windows` | `Data/Config/XUi_Menu/windows.xml` | Main menu windows |
-| `xui_menu_controls` | `Data/Config/XUi_Menu/controls.xml` | Main menu UI components |
-| `xui_menu_styles` | `Data/Config/XUi_Menu/styles.xml` | Main menu UI styles |
-| `xui_common_controls` | `Data/Config/XUi_Common/controls.xml` | Shared UI controls (HUD + Menu) |
-| `xui_common_styles` | `Data/Config/XUi_Common/styles.xml` | Shared UI styles (HUD + Menu) |
+4. Optionally, add the output folder to your `PATH` so you can call `modlet-builder` from anywhere.
 
-## Project Status
+### Basic usage
 
-> **Early development.** The tool is not yet functional. This repository is being set up.
+**What goes in:** one or more `*.frag.xml` source fragment files, or directories containing them.
 
-## Build and Run
-
-Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). The exact SDK version is pinned in [global.json](global.json).
-
-Build the entire solution:
+**What comes out:** generated XML files inside `{mod-dir}/Config/`, ready to drop into your game's `Mods/` folder.
 
 ```bash
-dotnet build ModletBuilder.sln
+modlet-builder build --src path/to/my-fragments --out path/to/Mods/MyMod --recursive
 ```
 
-Build outputs are redirected to the repository-root `build/` folder (configured in [Directory.Build.props](Directory.Build.props)):
+This scans `path/to/my-fragments/` recursively for `*.frag.xml` files, resolves their order, and writes the assembled XML files into `path/to/Mods/MyMod/Config/`:
+
+```text
+path/to/Mods/MyMod/
+└─ Config/
+   ├─ items.xml
+   └─ recipes.xml
+```
+
+Drop the `MyMod/` directory into your game's `Mods/` folder and you're done.
+
+To build the same source fragments into two different mods, run `build` twice with different `--out` values:
+
+```bash
+modlet-builder build --src src/ --out path/to/Mods/ModA
+modlet-builder build --src src/ --out path/to/Mods/ModB
+```
+
+## Quick Start for Developers
+
+1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) matching the version in [global.json](global.json).
+2. Clone the repository and open the root folder in VS Code or any editor with C# language support.
+3. Build the solution to verify everything compiles:
+
+   ```bash
+   dotnet build ModletBuilder.sln
+   ```
+
+4. Run the tests:
+
+   ```bash
+   dotnet test ModletBuilder.sln
+   ```
+
+5. Start from the CLI entry point: [src/ModletBuilder.Cli/Program.cs](src/ModletBuilder.Cli/Program.cs).
+   Command dispatching lives in [src/ModletBuilder.Cli/CommandLine.cs](src/ModletBuilder.Cli/CommandLine.cs).
+   Core domain logic lives in `src/ModletBuilder.Core/`.
+   Tests live in `src/ModletBuilder.Tests/`.
+
+Build outputs are redirected to the repository-root `build/` folder via [Directory.Build.props](Directory.Build.props). Do not commit the `build/` folder.
+
+To produce an optimized build:
+
+```bash
+dotnet build ModletBuilder.sln -c Release
+```
+
+### Publishing as a single executable
+
+Self-contained single file (no .NET runtime required on the target machine):
+
+```bash
+dotnet publish src/ModletBuilder.Cli -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+```
+
+Native AOT (fully native binary):
+
+```bash
+dotnet publish src/ModletBuilder.Cli -c Release -r win-x64 -p:PublishAot=true
+```
+
+Published output lands at `build/bin/ModletBuilder.Cli/Release/net10.0/<runtime>/publish/`.
+
+## Project Structure
+
+```text
+modlet-builder/
+├─ README.md
+├─ LICENSE
+├─ global.json              — pinned .NET SDK version
+├─ Directory.Build.props    — shared MSBuild properties (redirects build output)
+├─ ModletBuilder.sln        — solution file
+├─ docs/                    — design notes and specs
+├─ src/
+│  ├─ ModletBuilder.Cli/    — command-line entry point
+│  ├─ ModletBuilder.Core/   — core domain logic: parsing, resolution, generation
+│  └─ ModletBuilder.Tests/  — automated tests
+├─ samples/                 — minimal working examples
+└─ build/                   — generated build output (git-ignored)
+```
+
+Build output layout:
 
 ```text
 build/
@@ -129,70 +141,191 @@ build/
 └─ obj/<ProjectName>/<Configuration>/<TargetFramework>/
 ```
 
-For example, the CLI `Debug` binary lands at:
+## Source Structure and Fragment Files
+
+Each `*.frag.xml` file is a **source document** with root element `<modlet>`. A source document may contain one `<fragment>` or many. The logical build unit is the individual `<fragment>` element, not the file.
+
+A single source document may contribute content to multiple output targets. Dependency resolution, validation, ordering, and target routing all operate per `<fragment>` element.
+
+Source documents can be passed to `build` as explicit file paths, or collected automatically from a directory.
+
+### Source document format
+
+A source document containing two fragments targeting different output files:
+
+```xml
+<modlet>
+
+  <fragment name="my-mod.items.base" target="items">
+    <append xpath="/items">
+      <!-- item definitions go here -->
+    </append>
+  </fragment>
+
+  <fragment target="recipes" requires="my-mod.items.base">
+    <append xpath="/recipes">
+      <!-- recipe definitions go here -->
+    </append>
+  </fragment>
+
+</modlet>
+```
+
+### Attributes
+
+| Attribute | Required | Description |
+| --------- | -------- | ----------- |
+| `name` | Only when referenced | Public identifier for this fragment. Required only when another fragment needs to reference it in `requires`. Suggested convention: `{mod}.{target}.{role}`. |
+| `target` | Yes | The output config file this fragment contributes to. Must be one of the [known target values](#known-target-values). |
+| `requires` | No | Comma-separated list of public `name` values this fragment depends on. The tool places all dependencies before this fragment in the resolved output order. |
+
+Build-only metadata (`name`, `target`, `requires`) is stripped from all generated output. Only the child elements of `<fragment>` appear in the final XML.
+
+Fragments that are not referenced by `requires` should omit `name`. The tool still assigns every fragment an internal deterministic source-location id for validation and ordering diagnostics; that internal id is not part of the source format and cannot be used in `requires`.
+
+### Directory scanning
+
+When a directory is passed as a source, the tool scans it for `*.frag.xml` files. Use `--recursive` to include subdirectories. Explicit file paths and directory paths can be mixed freely in the same command. All discovered files are deduplicated and sorted deterministically before processing.
+
+## `build` Command
+
+Assembles source fragments into final game-ready XML files.
 
 ```text
-build/bin/ModletBuilder.Cli/Debug/net10.0/modlet-builder        # Linux/macOS
-build/bin/ModletBuilder.Cli/Debug/net10.0/modlet-builder.exe    # Windows
+modlet-builder build --src <path> [<path> ...] --out <mod-dir> [--recursive] [--dry-run] [--clean] [--verbosity <level>]
 ```
 
-Run via the SDK without locating the binary:
+### Options
+
+| Option | Required | Description |
+| ------ | -------- | ----------- |
+| `--src <path> [<path> ...]` | Yes | One or more source paths. Each path can be an explicit `*.frag.xml` file or a directory. Paths are space-separated and may be mixed freely. |
+| `--out <mod-dir>` | Yes | Output mod directory. Config files are written to `{mod-dir}/Config/`. Required even with `--dry-run`. |
+| `--recursive` | No | When a directory is given in `--src`, scan its subdirectories recursively for `*.frag.xml` files. |
+| `--dry-run` | No | Validate all source fragments, resolve dependencies, and report what would be written — without touching the filesystem at all. No directories are created or deleted. |
+| `--clean` | No | Delete the entire `--out` directory before writing output. Ignored when combined with `--dry-run`. |
+| `--verbosity <level>` | No | Controls how much is logged. One of: `debug`, `information` (default), `warning`, `error`, `none`. |
+
+### Example
+
+Given source fragments:
+
+```xml
+<!-- src/items.frag.xml -->
+<modlet>
+  <fragment name="mymod.items.base" target="items"> ... </fragment>
+  <fragment target="items" requires="mymod.items.base"> ... </fragment>
+</modlet>
+
+<!-- src/recipes.frag.xml -->
+<modlet>
+  <fragment target="recipes" requires="mymod.items.base"> ... </fragment>
+</modlet>
+```
+
+Run:
 
 ```bash
-dotnet run --project src/ModletBuilder.Cli -- build
+modlet-builder build --src src/ --out /path/to/Mods/MyMod --recursive
 ```
 
-To produce an optimized build, use `-c Release`:
-
-```bash
-dotnet build ModletBuilder.sln -c Release
-```
-
-The resulting executable is placed at `build/bin/ModletBuilder.Cli/Release/net10.0/modlet-builder` (`.exe` on Windows).
-
-## Publishing as a Single Executable
-
-Self-contained single file (no .NET runtime required on target machine):
-
-```bash
-dotnet publish src/ModletBuilder.Cli -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
-```
-
-Native AOT (fully native binary, if compatible with chosen dependencies):
-
-```bash
-dotnet publish src/ModletBuilder.Cli -c Release -r win-x64 -p:PublishAot=true
-```
-
-Published output is written under `build/bin/ModletBuilder.Cli/Release/net10.0/<runtime>/publish/`.
-
-## CLI Commands
-
-| Command | Description |
-| ------- | ----------- |
-| `build` | Assemble fragments into output config files |
-
-### `build` options
-
-| Option | Description |
-| ------ | ----------- |
-| `--dry-run` | Validate sources and simulate the build without writing any files to the output folder |
-
-## Repository Layout
+Result:
 
 ```text
-modlet-builder/
-├─ README.md
-├─ LICENSE
-├─ docs/                    — design notes, specs, format docs
-├─ src/
-│  ├─ ModletBuilder.Cli/    — command-line entrypoint
-│  ├─ ModletBuilder.Core/   — core domain logic
-│  ├─ ModletBuilder.Xml/    — XML parsing and generation
-│  └─ ModletBuilder.Tests/  — automated tests
-├─ samples/                 — minimal example inputs and outputs
-└─ schemas/                 — format definitions
+/path/to/Mods/MyMod/
+└─ Config/
+  ├─ items.xml      — mymod.items.base followed by the unnamed items fragment
+  └─ recipes.xml    — unnamed recipes fragment
 ```
+
+Each generated file has the following structure:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <!-- fragment body elements, in dependency-resolved order -->
+</config>
+```
+
+### Dry run
+
+`--dry-run` performs all parsing, validation, and dependency resolution steps but does not touch the filesystem in any way — no files are written, no directories are created or deleted. Use it to catch errors before committing to disk.
+
+```bash
+modlet-builder build --src src/ --out /path/to/Mods --recursive --dry-run
+```
+
+## Known Target Values
+
+The `target` attribute in a fragment file must be one of the values below. Each maps to a specific output path inside `Config/`.
+
+| Target value | Output path |
+| ------------ | ----------- |
+| `items` | `Config/items.xml` |
+| `blocks` | `Config/blocks.xml` |
+| `recipes` | `Config/recipes.xml` |
+| `loot` | `Config/loot.xml` |
+| `entityclasses` | `Config/entityclasses.xml` |
+| `entitygroups` | `Config/entitygroups.xml` |
+| `buffs` | `Config/buffs.xml` |
+| `progression` | `Config/progression.xml` |
+| `gamestages` | `Config/gamestages.xml` |
+| `spawning` | `Config/spawning.xml` |
+| `traders` | `Config/traders.xml` |
+| `vehicles` | `Config/vehicles.xml` |
+| `item_modifiers` | `Config/item_modifiers.xml` |
+| `quests` | `Config/quests.xml` |
+| `biomes` | `Config/biomes.xml` |
+| `sounds` | `Config/sounds.xml` |
+| `materials` | `Config/materials.xml` |
+| `shapes` | `Config/shapes.xml` |
+| `qualityinfo` | `Config/qualityinfo.xml` |
+| `worldglobal` | `Config/worldglobal.xml` |
+| `weathersurvival` | `Config/weathersurvival.xml` |
+| `painting` | `Config/painting.xml` |
+| `nav_objects` | `Config/nav_objects.xml` |
+| `archetypes` | `Config/archetypes.xml` |
+| `dialogs` | `Config/dialogs.xml` |
+| `npc` | `Config/npc.xml` |
+| `challenges` | `Config/challenges.xml` |
+| `events` | `Config/events.xml` |
+| `gameevents` | `Config/gameevents.xml` |
+| `rwgmixer` | `Config/rwgmixer.xml` |
+| `utilityai` | `Config/utilityai.xml` |
+| `misc` | `Config/misc.xml` |
+| `physicsbodies` | `Config/physicsbodies.xml` |
+| `ui_display` | `Config/ui_display.xml` |
+| `music` | `Config/music.xml` |
+| `subtitles` | `Config/subtitles.xml` |
+| `dmscontent` | `Config/dmscontent.xml` |
+| `twitch` | `Config/twitch.xml` |
+| `twitch_events` | `Config/twitch_events.xml` |
+| `videos` | `Config/videos.xml` |
+| `loadingscreen` | `Config/loadingscreen.xml` |
+| `blockplaceholders` | `Config/blockplaceholders.xml` |
+| `xui_windows` | `Config/XUi/windows.xml` |
+| `xui_controls` | `Config/XUi/controls.xml` |
+| `xui_styles` | `Config/XUi/styles.xml` |
+| `xui_menu_windows` | `Config/XUi_Menu/windows.xml` |
+| `xui_menu_controls` | `Config/XUi_Menu/controls.xml` |
+| `xui_menu_styles` | `Config/XUi_Menu/styles.xml` |
+| `xui_common_controls` | `Config/XUi_Common/controls.xml` |
+| `xui_common_styles` | `Config/XUi_Common/styles.xml` |
+
+## Project Status
+
+> **Early development.** The `build` command implementation is in progress. The command contract and source file format described in this document reflect the intended design.
+
+Known limitations for this phase:
+
+- No `ModInfo.xml` generation.
+- No `Localization.txt` support.
+- Only `*.frag.xml` source format is supported.
+- `target` values not in the table above are hard errors; no custom target extensibility yet.
+
+**Breaking change:** the `--out` option expects a **single mod directory**. Config files are written to `{mod-dir}/Config/`. To build the same sources into two different mods, run `build` twice with different `--out` values. The `hint` attribute on `<modlet>` and `<fragment>` elements and the `--targets` option are no longer supported and will produce errors.
+
+**Breaking change (previous):** source documents must use root element `<modlet>`. The previous root `<fragment>` format is not supported.
 
 ## License
 

@@ -1,0 +1,18 @@
+<modlet>
+  <!--
+    Alloy Motor Tool Parts - item definition.
+    Source: EV_AlloyMotorToolParts by Aleksei Khozin
+  -->
+  <fragment target="items">
+    <append xpath="/items">
+      <item name="motorToolPartsA_Alloy">
+        <property name="Extends" value="meleeToolAxeT3ChainsawParts"/>
+        <property name="CustomIcon" value="meleeToolAxeT3ChainsawParts"/>
+        <property name="CustomIconTint" value="7A8C9E"/>
+        <property name="EconomicValue" value="1400"/>
+        <property name="DescriptionKey" value="motorToolPartsA_AlloyDesc"/>
+        <property name="DisplayType" value="resourceGeneric"/>
+      </item>
+    </append>
+  </fragment>
+</modlet>

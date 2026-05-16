@@ -1,0 +1,13 @@
+<modlet>
+  <!--
+    INVALID: missing dependency.
+    This fragment declares requires="invalid.items.nonexistent" but no
+    fragment with that name exists anywhere in the source set.
+    Expected error: an unnamed fragment requires 'invalid.items.nonexistent' which is not defined.
+  -->
+  <fragment target="recipes" requires="invalid.items.nonexistent">
+    <append xpath="/recipes">
+      <recipe name="testRecipe" count="1"/>
+    </append>
+  </fragment>
+</modlet>

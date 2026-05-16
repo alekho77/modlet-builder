@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <append xpath="/lootcontainers">
+      <lootgroup name="evLootBoxDrinkSimple" count="1">
+        <item name="drinkJarYuccaJuice" count="1,3" />
+        <item name="drinkJarBoiledWater" count="5,7" />
+      </lootgroup>
+      <lootgroup name="evLootBoxDrinkGood" count="1">
+        <item name="drinkJarPureMineralWater" count="2,4" />
+        <item name="drinkJarRedTea" count="2,3" />
+      </lootgroup>
+      <lootgroup name="evLootBoxDrinkValuable" count="1">
+        <item name="drinkJarHoneyTea" count="2,4" />
+        <item name="drinkJarBlackStrapCoffee" count="1,3" />
+      </lootgroup>
+    </append>
+  <append xpath="/lootcontainers">
+      <lootgroup name="evLootBoxFoodSimple" count="1">
+        <item name="foodCanBeef" count="3,5" />
+        <item name="foodCanChicken" count="4,6" />
+        <item name="foodBaconAndEggs" count="2,4" />
+      </lootgroup>
+      <lootgroup name="evLootBoxFoodGood" count="1">
+        <item name="foodMeatStew" count="2,4" />
+        <item name="foodSteakAndPotato" count="1,3" />
+      </lootgroup>
+      <lootgroup name="evLootBoxFoodValuable" count="1">
+        <item name="foodHoneyGlazedSham" count="1,3" />
+        <item name="foodHoneyBrisket" count="1,3" />
+      </lootgroup>
+    </append>
+  <append xpath="/lootcontainers">
+      <lootgroup name="evLootBoxSimplePool" count="all">
+        <item group="evLootBoxFoodSimple" />
+        <item group="evLootBoxDrinkSimple" />
+        <item name="ammo9mmBulletBall" count="50,100" />
+      </lootgroup>
+      <lootgroup name="evLootBoxGoodPool" count="all">
+        <item group="evLootBoxFoodGood" />
+        <item group="evLootBoxDrinkGood" />
+        <item name="medicalFirstAidKit" count="1,2" />
+      </lootgroup>
+      <lootgroup name="evLootBoxValuablePool" count="all">
+        <item group="evLootBoxFoodValuable" />
+        <item group="evLootBoxDrinkValuable" />
+        <item name="resourceRepairKit" count="3,5" />
+      </lootgroup>
+    </append>
+  <append xpath="/lootcontainers">
+      <lootgroup name="evLootBoxCategorySelector" count="1">
+        <item group="evLootBoxSimplePool" prob="75" />
+        <item group="evLootBoxGoodPool" prob="20" />
+        <item group="evLootBoxValuablePool" prob="5" />
+      </lootgroup>
+      <lootcontainer name="evLootBoxRewards" count="1" size="3,2" sound_open="SupplyDrops/open_supply_crate" sound_close="SupplyDrops/close_supply_crate" loot_quality_template="qualBaseTemplate" destroy_on_close="empty" unique_item="true" ignore_loot_abundance="true">
+        <item group="evLootBoxCategorySelector" />
+      </lootcontainer>
+    </append>
+</config>

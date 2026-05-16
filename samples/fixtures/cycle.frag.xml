@@ -1,0 +1,17 @@
+<modlet>
+  <!--
+    INVALID: circular dependency.
+    Fragment A requires B and fragment B requires A — neither can be resolved first.
+    Expected error: Circular dependency detected among fragments: 'invalid.cycle.a', 'invalid.cycle.b'.
+  -->
+  <fragment name="invalid.cycle.a" target="items" requires="invalid.cycle.b">
+    <append xpath="/items">
+      <item name="testItemA"/>
+    </append>
+  </fragment>
+  <fragment name="invalid.cycle.b" target="items" requires="invalid.cycle.a">
+    <append xpath="/items">
+      <item name="testItemB"/>
+    </append>
+  </fragment>
+</modlet>

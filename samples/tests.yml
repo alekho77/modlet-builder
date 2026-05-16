@@ -1,0 +1,127 @@
+tests:
+  - id: alloy-motor-tool-parts-golden
+    name: Alloy Motor Tool Parts Golden Match
+    description: Build the Alloy Motor Tool Parts sample and compare the output with the checked-in expected files.
+    command:
+      verb: build
+      sources:
+        - samples/golden/alloy-motor-tool-parts/src
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 0
+      expected_result_path: samples/golden/alloy-motor-tool-parts/expected
+
+  - id: alloy-dry-run-no-output
+    name: Alloy Sample Dry Run
+    description: Build the Alloy sample with dry-run and verify that no Config directory is created.
+    command:
+      verb: build
+      sources:
+        - samples/golden/alloy-motor-tool-parts/src
+      output: "{tempOut}"
+      dry_run: true
+      verbosity: none
+    expected:
+      exit_code: 0
+      config_created: false
+
+  - id: alloy-clean-removes-stale-file
+    name: Alloy Sample Clean Removes Stale File
+    description: Pre-create a stale file in the output directory, run build with clean, and verify that the stale file is removed.
+    command:
+      verb: build
+      sources:
+        - samples/golden/alloy-motor-tool-parts/src
+      output: "{tempOut}"
+      clean: true
+      verbosity: none
+    pre_setup_files:
+      - path: "{tempOut}/Config/stale.xml"
+        content: <stale/>
+    expected:
+      exit_code: 0
+      existing_paths:
+        - Config/items.xml
+      missing_paths:
+        - Config/stale.xml
+
+  - id: ev-lootbox-golden
+    name: EV LootBox Golden Match
+    description: Build the EV LootBox sample with cross-file lootgroup dependencies and compare the output with the checked-in expected files. Verifies that named fragments across separate files are resolved and ordered correctly by requires.
+    command:
+      verb: build
+      sources:
+        - samples/golden/ev-lootbox/src
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 0
+      expected_result_path: samples/golden/ev-lootbox/expected
+
+  - id: invalid-missing-dependency
+    name: Missing Dependency Returns Error
+    description: Build the invalid missing-dependency fixture and verify that no Config directory is created.
+    command:
+      verb: build
+      sources:
+        - samples/fixtures/missing-dependency.frag.xml
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 1
+      config_created: false
+
+  - id: invalid-cycle
+    name: Dependency Cycle Returns Error
+    description: Build the invalid cycle fixture and verify that no Config directory is created.
+    command:
+      verb: build
+      sources:
+        - samples/fixtures/cycle.frag.xml
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 1
+      config_created: false
+
+  - id: invalid-hint-attribute
+    name: Hint Attribute Produces Warning
+    description: Build the hint-attribute fixture and verify that the build succeeds with a warning and output is generated.
+    command:
+      verb: build
+      sources:
+        - samples/fixtures/hint-attribute.frag.xml
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 0
+      config_created: true
+
+  - id: invalid-malformed-xml
+    name: Malformed XML Returns Error
+    description: Build the invalid malformed fixture and verify that no Config directory is created.
+    command:
+      verb: build
+      sources:
+        - samples/fixtures/malformed.frag.xml
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 1
+      config_created: false
+
+  - id: no-fragments-found-error
+    name: No Fragments Found Returns Error
+    description: Point the build command at an empty source directory and verify that no Config directory is created.
+    setup_directories:
+      - "{tempSrc}/empty-src"
+    command:
+      verb: build
+      sources:
+        - "{tempSrc}/empty-src"
+      output: "{tempOut}/empty-out"
+      verbosity: none
+    expected:
+      exit_code: 1
+      config_created: false

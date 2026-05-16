@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <append xpath="/recipes">
+      <recipe name="motorToolPartsA_Alloy" count="1" craft_area="workbench" craft_time="60" tags="toolPartsA_unlock">
+        <ingredient name="meleeToolAxeT3ChainsawParts" count="1" />
+        <ingredient name="resourceSilverNugget" count="1" />
+        <ingredient name="resourceForgedSteel" count="5" />
+      </recipe>
+    </append>
+</config>
