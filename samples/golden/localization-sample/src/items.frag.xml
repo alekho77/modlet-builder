@@ -1,8 +1,9 @@
 <modlet>
 
   <!-- Description localization entry for the item defined below. -->
-  <localization key="evSampleItemDesc" file="items" type="Item"
-    context="Item description">
+  <!-- file and type are intentionally omitted: the build tool auto-derives them
+       from the <item> parent element in the fragment that references this key. -->
+  <localization key="evSampleItemDesc" context="Item description">
     <english text="A demonstration item for modlet-builder localization support."/>
     <russian text="Демонстрационный предмет для поддержки локализации в modlet-builder."/>
   </localization>

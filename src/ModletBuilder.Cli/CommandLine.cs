@@ -101,11 +101,15 @@ internal static class CommandLine
 
         logger.Debug($"Resolved order for {ordered.Count} fragment(s).");
 
+        // ── Stage 1.25: Localization attribute resolution ─────────────────────
+        // Auto-fill File and Type for localization entries that omitted them in source XML.
+        var localizationEntriesResolved = LocalizationAttributeResolver.Resolve(localizationEntries, ordered);
+
         // ── Stage 1.5: Localization validation ───────────────────────────────
-        var localizationDiagnostics = LocalizationValidator.Validate(localizationEntries);
+        var localizationDiagnostics = LocalizationValidator.Validate(localizationEntriesResolved);
         allDiagnostics.AddRange(localizationDiagnostics);
 
-        var orphanedDiagnostics = LocalizationValidator.ValidateOrphanedLocalizationKeys(localizationEntries, ordered);
+        var orphanedDiagnostics = LocalizationValidator.ValidateOrphanedLocalizationKeys(localizationEntriesResolved, ordered);
         allDiagnostics.AddRange(orphanedDiagnostics);
 
         var descKeyTargetDiagnostics = LocalizationValidator.ValidateDescriptionKeyTargets(ordered);
@@ -119,7 +123,7 @@ internal static class CommandLine
 
         // ── Stage 2: Output generation ────────────────────────────────────────
         var generateDiagnostics = OutputGenerator.Generate(
-            ordered, localizationEntries, options.OutputDir, options.DryRun, options.Clean, logger);
+            ordered, localizationEntriesResolved, options.OutputDir, options.DryRun, options.Clean, logger);
         allDiagnostics.AddRange(generateDiagnostics);
 
         EmitDiagnostics(allDiagnostics, logger);

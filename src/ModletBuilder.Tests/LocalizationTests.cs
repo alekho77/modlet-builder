@@ -4,6 +4,7 @@ using ModletBuilder.Core.Generation;
 using ModletBuilder.Core.Logging;
 using ModletBuilder.Core.Models;
 using ModletBuilder.Core.Parsing;
+using ModletBuilder.Core.Resolution;
 using ModletBuilder.Core.Validation;
 
 namespace ModletBuilder.Tests;
@@ -130,7 +131,7 @@ public class LocalizationTests : IDisposable
     }
 
     [Fact]
-    public void Localization_block_missing_file_produces_error()
+    public void Localization_block_without_file_is_parsed_with_empty_file()
     {
         var file = Write(@"
 <modlet>
@@ -138,14 +139,15 @@ public class LocalizationTests : IDisposable
   <fragment target=""items""><append/></fragment>
 </modlet>");
 
-        var (_, _, diagnostics) = FragmentParser.Parse(file);
+        var (_, localizationEntries, diagnostics) = FragmentParser.Parse(file);
 
-        Assert.Contains(diagnostics, d =>
-            d.Severity == DiagnosticSeverity.Error && d.Message.Contains("'file'"));
+        Assert.DoesNotContain(diagnostics, d => d.Message.Contains("'file'"));
+        Assert.Single(localizationEntries);
+        Assert.Equal(string.Empty, localizationEntries[0].File);
     }
 
     [Fact]
-    public void Localization_block_missing_type_produces_error()
+    public void Localization_block_without_type_is_parsed_with_empty_type()
     {
         var file = Write(@"
 <modlet>
@@ -153,10 +155,11 @@ public class LocalizationTests : IDisposable
   <fragment target=""items""><append/></fragment>
 </modlet>");
 
-        var (_, _, diagnostics) = FragmentParser.Parse(file);
+        var (_, localizationEntries, diagnostics) = FragmentParser.Parse(file);
 
-        Assert.Contains(diagnostics, d =>
-            d.Severity == DiagnosticSeverity.Error && d.Message.Contains("'type'"));
+        Assert.DoesNotContain(diagnostics, d => d.Message.Contains("'type'"));
+        Assert.Single(localizationEntries);
+        Assert.Equal(string.Empty, localizationEntries[0].Type);
     }
 
     [Fact]
@@ -261,6 +264,87 @@ public class LocalizationTests : IDisposable
         Assert.Empty(diagnostics);
         Assert.Single(fragments);
         Assert.Empty(localizationEntries);
+    }
+
+    // ── LocalizationAttributeResolver ─────────────────────────────────────────
+
+    [Fact]
+    public void Resolver_fills_file_and_type_for_item_from_items_fragment()
+    {
+        var entry = UnresolvedEntry("f.frag.xml", "myItemDesc");
+        var fragment = FragWith("f.frag.xml",
+            "<append xpath=\"/items\"><item name=\"myItem\"><property name=\"DescriptionKey\" value=\"myItemDesc\"/></item></append>");
+
+        var resolved = LocalizationAttributeResolver.Resolve([entry], [fragment]);
+
+        Assert.Single(resolved);
+        Assert.Equal("items", resolved[0].File);
+        Assert.Equal("Item", resolved[0].Type);
+    }
+
+    [Fact]
+    public void Resolver_fills_file_and_type_for_block_from_blocks_fragment()
+    {
+        var entry = UnresolvedEntry("f.frag.xml", "myBlockDesc");
+        var fragment = new Fragment(
+            InternalId: "id:f",
+            Name: null,
+            Target: "blocks",
+            Requires: [],
+            SourceFile: "f.frag.xml",
+            Body: [XElement.Parse("<append xpath=\"/blocks\"><block name=\"myBlock\"><property name=\"DescriptionKey\" value=\"myBlockDesc\"/></block></append>")]);
+
+        var resolved = LocalizationAttributeResolver.Resolve([entry], [fragment]);
+
+        Assert.Single(resolved);
+        Assert.Equal("blocks", resolved[0].File);
+        Assert.Equal("Block", resolved[0].Type);
+    }
+
+    [Fact]
+    public void Resolver_fills_file_and_type_for_item_modifier_from_item_modifiers_fragment()
+    {
+        var entry = UnresolvedEntry("f.frag.xml", "myModDesc");
+        var fragment = new Fragment(
+            InternalId: "id:f",
+            Name: null,
+            Target: "item_modifiers",
+            Requires: [],
+            SourceFile: "f.frag.xml",
+            Body: [XElement.Parse("<append xpath=\"/item_modifiers\"><item_modifier name=\"myMod\"><property name=\"DescriptionKey\" value=\"myModDesc\"/></item_modifier></append>")]);
+
+        var resolved = LocalizationAttributeResolver.Resolve([entry], [fragment]);
+
+        Assert.Single(resolved);
+        Assert.Equal("item_modifiers", resolved[0].File);
+        Assert.Equal("Mod", resolved[0].Type);
+    }
+
+    [Fact]
+    public void Resolver_does_not_change_entry_with_explicit_file_and_type()
+    {
+        var entry = EntryWith("f.frag.xml", "myItemDesc");
+        var fragment = FragWith("f.frag.xml",
+            "<append xpath=\"/items\"><item name=\"myItem\"><property name=\"DescriptionKey\" value=\"myItemDesc\"/></item></append>");
+
+        var resolved = LocalizationAttributeResolver.Resolve([entry], [fragment]);
+
+        Assert.Single(resolved);
+        Assert.Same(entry, resolved[0]);
+    }
+
+    [Fact]
+    public void Resolver_leaves_entry_unchanged_when_key_not_found_in_any_fragment()
+    {
+        var entry = UnresolvedEntry("f.frag.xml", "orphanDesc");
+        var fragment = FragWith("f.frag.xml",
+            "<append xpath=\"/items\"><item name=\"x\"/></append>");
+
+        var resolved = LocalizationAttributeResolver.Resolve([entry], [fragment]);
+
+        Assert.Single(resolved);
+        Assert.Equal(string.Empty, resolved[0].File);
+        Assert.Equal(string.Empty, resolved[0].Type);
     }
 
     // ── Validator: orphaned localization key detection ────────────────────────
@@ -569,6 +653,31 @@ public class LocalizationTests : IDisposable
             Polish: string.Empty,
             Brazilian: string.Empty,
             Russian: russian,
+            Turkish: string.Empty,
+            Schinese: string.Empty,
+            Tchinese: string.Empty,
+            SourceFile: sourceFile);
+
+    /// <summary>Helper that creates a <see cref="LocalizationEntry"/> with empty File and Type,
+    /// simulating a source localization block that omitted those attributes.</summary>
+    private static LocalizationEntry UnresolvedEntry(string sourceFile, string key) =>
+        new(
+            Key: key,
+            File: string.Empty,
+            Type: string.Empty,
+            UsedInMainMenu: string.Empty,
+            NoTranslate: string.Empty,
+            English: string.Empty,
+            Context: string.Empty,
+            German: string.Empty,
+            Spanish: string.Empty,
+            French: string.Empty,
+            Italian: string.Empty,
+            Japanese: string.Empty,
+            Koreana: string.Empty,
+            Polish: string.Empty,
+            Brazilian: string.Empty,
+            Russian: string.Empty,
             Turkish: string.Empty,
             Schinese: string.Empty,
             Tchinese: string.Empty,

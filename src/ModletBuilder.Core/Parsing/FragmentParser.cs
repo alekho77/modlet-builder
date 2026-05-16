@@ -180,18 +180,12 @@ internal static class FragmentParser
         var diagnostics = new List<Diagnostic>();
 
         var key = el.Attribute("key")?.Value;
-        var file = el.Attribute("file")?.Value;
-        var type = el.Attribute("type")?.Value;
+        var file = el.Attribute("file")?.Value ?? string.Empty;
+        var type = el.Attribute("type")?.Value ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(key))
             diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
                 "Localization block is missing required attribute 'key'.", filePath));
-        if (string.IsNullOrWhiteSpace(file))
-            diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
-                "Localization block is missing required attribute 'file'.", filePath));
-        if (string.IsNullOrWhiteSpace(type))
-            diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
-                "Localization block is missing required attribute 'type'.", filePath));
 
         var usedInMainMenu = el.Attribute("usedInMainMenu")?.Value ?? string.Empty;
         var noTranslate = el.Attribute("noTranslate")?.Value ?? string.Empty;
@@ -256,8 +250,8 @@ internal static class FragmentParser
 
         var entry = new LocalizationEntry(
             Key: key!,
-            File: file!,
-            Type: type!,
+            File: file,
+            Type: type,
             UsedInMainMenu: usedInMainMenu,
             NoTranslate: noTranslate,
             English: Lang("english"),
