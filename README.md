@@ -328,28 +328,29 @@ Known limitations for this phase:
 
 ## Localization
 
-`modlet-builder` can generate `Config/Localization.txt` alongside your XML config files. Place `<localization>` blocks directly inside `<fragment>` elements. The blocks are build metadata: they are stripped from the generated XML and assembled into a single `Config/Localization.txt` in the 7 Days to Die CSV format.
+`modlet-builder` can generate `Config/Localization.txt` alongside your XML config files. Place `<localization>` blocks inside the `<modlet>` root element alongside the fragments they describe. The blocks are build metadata: they are stripped from the generated output and assembled into a single `Config/Localization.txt` in the 7 Days to Die CSV format.
 
 ### Localization block format
 
 ```xml
-<fragment name="mymod.items.base" target="items">
-  <localization key="myItemName" file="items" type="Item"
-    context="Display name" usedInMainMenu="" noTranslate="">
-    <english text="My Item"/>
-    <russian text="Мой предмет"/>
-    <german text="Mein Gegenstand"/>
-  </localization>
+<modlet>
+
   <localization key="myItemDesc" file="items" type="Item"
     context="Item description">
     <english text="A custom item added by the mod."/>
+    <russian text="Мой предмет"/>
+    <german text="Mein Gegenstand"/>
   </localization>
-  <append xpath="/items">
-    <item name="myItem">
-      <property name="DescriptionKey" value="myItemDesc"/>
-    </item>
-  </append>
-</fragment>
+
+  <fragment name="mymod.items.base" target="items">
+    <append xpath="/items">
+      <item name="myItem">
+        <property name="DescriptionKey" value="myItemDesc"/>
+      </item>
+    </append>
+  </fragment>
+
+</modlet>
 ```
 
 ### Localization block attributes
@@ -392,11 +393,15 @@ The CSV uses the exact column order from `Localization.txt`:
 Key,File,Type,UsedInMainMenu,NoTranslate,english,Context / Alternate Text,german,...
 ```
 
-Row order follows the dependency-resolved fragment order, then source order within each fragment. Values containing commas, quotes, or newlines are quoted per RFC 4180. The file is UTF-8 without BOM.
+Row order follows the discovered file order (files sorted deterministically), then source order within each file. Values containing commas, quotes, or newlines are quoted per RFC 4180. The file is UTF-8 without BOM.
 
 ### Duplicate key rule
 
-Two `<localization>` blocks with the same `key` across any fragments are a build error. The error message identifies both the duplicate and the first definition location. No output files are written when duplicate keys are detected.
+Two `<localization>` blocks with the same `key` across any source documents are a build error. The error message identifies both the duplicate and the first definition location. No output files are written when duplicate keys are detected.
+
+### DescriptionKey linkage rule
+
+Every `<localization>` key must be referenced by at least one `<property name="DescriptionKey" value="..."/>` inside a fragment body in the same build. A localization key that is not linked to any `DescriptionKey` property is a build error. No output files are written.
 
 ## License
 
