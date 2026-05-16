@@ -8,5 +8,4 @@ internal sealed record Fragment(
     string Target,
     string[] Requires,
     string SourceFile,
-    IReadOnlyList<XElement> Body,
-    IReadOnlyList<LocalizationEntry> LocalizationEntries);
+    IReadOnlyList<XElement> Body);

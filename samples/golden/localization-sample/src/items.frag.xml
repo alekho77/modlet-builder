@@ -1,17 +1,19 @@
 <modlet>
 
-  <!-- Item definition fragment: defines the item XML patch AND its display strings inline. -->
+  <!-- Localization strings for items defined in this file. -->
+  <localization key="evSampleItem" file="items" type="Item">
+    <english text="Sample Item"/>
+    <russian text="Образцовый предмет"/>
+    <german text="Beispielobjekt"/>
+  </localization>
+  <localization key="evSampleItemDesc" file="items" type="Item"
+    context="Item description">
+    <english text="A demonstration item for modlet-builder localization support."/>
+    <russian text="Демонстрационный предмет для поддержки локализации в modlet-builder."/>
+  </localization>
+
+  <!-- Item definition fragment: pure XML patch payload. -->
   <fragment name="localization-sample.items.base" target="items">
-    <localization key="evSampleItem" file="items" type="Item">
-      <english text="Sample Item"/>
-      <russian text="Образцовый предмет"/>
-      <german text="Beispielobjekt"/>
-    </localization>
-    <localization key="evSampleItemDesc" file="items" type="Item"
-      context="Item description">
-      <english text="A demonstration item for modlet-builder localization support."/>
-      <russian text="Демонстрационный предмет для поддержки локализации в modlet-builder."/>
-    </localization>
     <append xpath="/items">
       <item name="evSampleItem">
         <property name="Extends" value="meleeToolRepairT1ClawHammer"/>
@@ -20,13 +22,15 @@
     </append>
   </fragment>
 
-  <!-- Recipe fragment: depends on the item, adds its own localization key. -->
+  <!-- Localization string for the recipe defined below. -->
+  <localization key="evSampleRecipe" file="items" type="Item">
+    <english text="Sample Recipe"/>
+    <russian text="Образцовый рецепт"/>
+  </localization>
+
+  <!-- Recipe fragment: depends on the item fragment. Pure XML patch payload. -->
   <fragment name="localization-sample.recipes.base" target="recipes"
     requires="localization-sample.items.base">
-    <localization key="evSampleRecipe" file="items" type="Item">
-      <english text="Sample Recipe"/>
-      <russian text="Образцовый рецепт"/>
-    </localization>
     <append xpath="/recipes">
       <recipe name="evSampleItem" count="1" craft_area="workbench">
         <ingredient name="resourceWood" count="10"/>

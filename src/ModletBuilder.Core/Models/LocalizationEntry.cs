@@ -24,5 +24,4 @@ internal sealed record LocalizationEntry(
     string Turkish,
     string Schinese,
     string Tchinese,
-    string SourceFile,
-    string ParentFragmentId);
+    string SourceFile);

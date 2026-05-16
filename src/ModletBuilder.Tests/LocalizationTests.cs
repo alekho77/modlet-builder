@@ -1,4 +1,5 @@
 using System.Text;
+using System.Xml.Linq;
 using ModletBuilder.Core.Generation;
 using ModletBuilder.Core.Logging;
 using ModletBuilder.Core.Models;
@@ -25,27 +26,27 @@ public class LocalizationTests : IDisposable
             Directory.Delete(_tempDir, recursive: true);
     }
 
-    // ── Parser: localization block extraction ─────────────────────────────────
+    // ── Parser: localization block extraction at modlet level ─────────────────
 
     [Fact]
     public void Localization_block_is_parsed_with_all_required_attributes()
     {
         var file = Write(@"
 <modlet>
+  <localization key=""myKey"" file=""items"" type=""Item"">
+    <english text=""My Item""/>
+  </localization>
   <fragment target=""items"">
-    <localization key=""myKey"" file=""items"" type=""Item"">
-      <english text=""My Item""/>
-    </localization>
     <append xpath=""/items""/>
   </fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, localizationEntries, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(diagnostics);
         Assert.Single(fragments);
-        Assert.Single(fragments[0].LocalizationEntries);
-        var entry = fragments[0].LocalizationEntries[0];
+        Assert.Single(localizationEntries);
+        var entry = localizationEntries[0];
         Assert.Equal("myKey", entry.Key);
         Assert.Equal("items", entry.File);
         Assert.Equal("Item", entry.Type);
@@ -54,61 +55,63 @@ public class LocalizationTests : IDisposable
     }
 
     [Fact]
-    public void Localization_block_is_stripped_from_fragment_body()
+    public void Fragment_body_is_pure_payload_with_no_localization_nodes()
     {
         var file = Write(@"
 <modlet>
+  <localization key=""k"" file=""items"" type=""Item""><english text=""x""/></localization>
   <fragment target=""items"">
-    <localization key=""k"" file=""items"" type=""Item""><english text=""x""/></localization>
     <append xpath=""/items""/>
   </fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(diagnostics);
         Assert.Single(fragments);
-        // Body must contain only <append>, not the <localization> node.
+        // Body must contain only <append> — localization is not a child of <fragment>.
         Assert.Single(fragments[0].Body);
         Assert.Equal("append", fragments[0].Body[0].Name.LocalName);
     }
 
     [Fact]
-    public void Fragment_body_only_localization_produces_empty_body()
+    public void Localization_inside_fragment_produces_error_with_guidance()
     {
         var file = Write(@"
 <modlet>
   <fragment target=""items"">
     <localization key=""k"" file=""items"" type=""Item""><english text=""x""/></localization>
+    <append/>
   </fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (_, _, diagnostics) = FragmentParser.Parse(file);
 
-        Assert.Empty(diagnostics);
-        Assert.Single(fragments);
-        Assert.Empty(fragments[0].Body);
-        Assert.Single(fragments[0].LocalizationEntries);
+        Assert.Contains(diagnostics, d =>
+            d.Severity == DiagnosticSeverity.Error
+            && d.Message.Contains("<localization>")
+            && d.Message.Contains("<modlet>"));
     }
 
     [Fact]
-    public void Multiple_localization_blocks_in_one_fragment_are_all_parsed()
+    public void Multiple_localization_blocks_at_modlet_level_are_all_parsed()
     {
         var file = Write(@"
 <modlet>
+  <localization key=""k1"" file=""items"" type=""Item""><english text=""A""/></localization>
+  <localization key=""k2"" file=""items"" type=""Item""><english text=""B""/></localization>
   <fragment target=""items"">
-    <localization key=""k1"" file=""items"" type=""Item""><english text=""A""/></localization>
-    <localization key=""k2"" file=""items"" type=""Item""><english text=""B""/></localization>
+    <append/>
   </fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, localizationEntries, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(diagnostics);
         Assert.Single(fragments);
-        Assert.Equal(2, fragments[0].LocalizationEntries.Count);
-        Assert.Equal("k1", fragments[0].LocalizationEntries[0].Key);
-        Assert.Equal("k2", fragments[0].LocalizationEntries[1].Key);
+        Assert.Equal(2, localizationEntries.Count);
+        Assert.Equal("k1", localizationEntries[0].Key);
+        Assert.Equal("k2", localizationEntries[1].Key);
     }
 
     [Fact]
@@ -116,13 +119,11 @@ public class LocalizationTests : IDisposable
     {
         var file = Write(@"
 <modlet>
-  <fragment target=""items"">
-    <localization file=""items"" type=""Item""><english text=""x""/></localization>
-    <append/>
-  </fragment>
+  <localization file=""items"" type=""Item""><english text=""x""/></localization>
+  <fragment target=""items""><append/></fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (_, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Contains(diagnostics, d =>
             d.Severity == DiagnosticSeverity.Error && d.Message.Contains("'key'"));
@@ -133,13 +134,11 @@ public class LocalizationTests : IDisposable
     {
         var file = Write(@"
 <modlet>
-  <fragment target=""items"">
-    <localization key=""k"" type=""Item""><english text=""x""/></localization>
-    <append/>
-  </fragment>
+  <localization key=""k"" type=""Item""><english text=""x""/></localization>
+  <fragment target=""items""><append/></fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (_, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Contains(diagnostics, d =>
             d.Severity == DiagnosticSeverity.Error && d.Message.Contains("'file'"));
@@ -150,13 +149,11 @@ public class LocalizationTests : IDisposable
     {
         var file = Write(@"
 <modlet>
-  <fragment target=""items"">
-    <localization key=""k"" file=""items""><english text=""x""/></localization>
-    <append/>
-  </fragment>
+  <localization key=""k"" file=""items""><english text=""x""/></localization>
+  <fragment target=""items""><append/></fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (_, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Contains(diagnostics, d =>
             d.Severity == DiagnosticSeverity.Error && d.Message.Contains("'type'"));
@@ -167,13 +164,11 @@ public class LocalizationTests : IDisposable
     {
         var file = Write(@"
 <modlet>
-  <fragment target=""items"">
-    <localization key=""k"" file=""items"" type=""Item"" extra=""x""><english text=""x""/></localization>
-    <append/>
-  </fragment>
+  <localization key=""k"" file=""items"" type=""Item"" extra=""x""><english text=""x""/></localization>
+  <fragment target=""items""><append/></fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (_, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Contains(diagnostics, d =>
             d.Severity == DiagnosticSeverity.Error && d.Message.Contains("'extra'"));
@@ -184,15 +179,13 @@ public class LocalizationTests : IDisposable
     {
         var file = Write(@"
 <modlet>
-  <fragment target=""items"">
-    <localization key=""k"" file=""items"" type=""Item"">
-      <elvish text=""Namárië""/>
-    </localization>
-    <append/>
-  </fragment>
+  <localization key=""k"" file=""items"" type=""Item"">
+    <elvish text=""Namárië""/>
+  </localization>
+  <fragment target=""items""><append/></fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (_, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Contains(diagnostics, d =>
             d.Severity == DiagnosticSeverity.Error && d.Message.Contains("<elvish>"));
@@ -203,16 +196,14 @@ public class LocalizationTests : IDisposable
     {
         var file = Write(@"
 <modlet>
-  <fragment target=""items"">
-    <localization key=""k"" file=""items"" type=""Item"">
-      <english text=""first""/>
-      <english text=""second""/>
-    </localization>
-    <append/>
-  </fragment>
+  <localization key=""k"" file=""items"" type=""Item"">
+    <english text=""first""/>
+    <english text=""second""/>
+  </localization>
+  <fragment target=""items""><append/></fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (_, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Contains(diagnostics, d =>
             d.Severity == DiagnosticSeverity.Error && d.Message.Contains("<english>"));
@@ -223,15 +214,13 @@ public class LocalizationTests : IDisposable
     {
         var file = Write(@"
 <modlet>
-  <fragment target=""items"">
-    <localization key=""k"" file=""items"" type=""Item"">
-      <english/>
-    </localization>
-    <append/>
-  </fragment>
+  <localization key=""k"" file=""items"" type=""Item"">
+    <english/>
+  </localization>
+  <fragment target=""items""><append/></fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (_, _, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Contains(diagnostics, d =>
             d.Severity == DiagnosticSeverity.Error && d.Message.Contains("'text'"));
@@ -242,24 +231,23 @@ public class LocalizationTests : IDisposable
     {
         var file = Write(@"
 <modlet>
-  <fragment target=""items"">
-    <localization key=""k"" file=""items"" type=""Item"" context=""hint"" usedInMainMenu=""True"" noTranslate=""False"">
-      <english text=""x""/>
-    </localization>
-  </fragment>
+  <localization key=""k"" file=""items"" type=""Item"" context=""hint"" usedInMainMenu=""True"" noTranslate=""False"">
+    <english text=""x""/>
+  </localization>
+  <fragment target=""items""><append/></fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (_, localizationEntries, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(diagnostics);
-        var entry = fragments[0].LocalizationEntries[0];
+        var entry = localizationEntries[0];
         Assert.Equal("hint", entry.Context);
         Assert.Equal("True", entry.UsedInMainMenu);
         Assert.Equal("False", entry.NoTranslate);
     }
 
     [Fact]
-    public void Fragment_without_localization_block_has_empty_entries_list()
+    public void Document_without_localization_blocks_returns_empty_localization_list()
     {
         var file = Write(@"
 <modlet>
@@ -268,10 +256,11 @@ public class LocalizationTests : IDisposable
   </fragment>
 </modlet>");
 
-        var (fragments, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, localizationEntries, diagnostics) = FragmentParser.Parse(file);
 
         Assert.Empty(diagnostics);
-        Assert.Empty(fragments[0].LocalizationEntries);
+        Assert.Single(fragments);
+        Assert.Empty(localizationEntries);
     }
 
     // ── Validator: duplicate key detection ────────────────────────────────────
@@ -279,13 +268,13 @@ public class LocalizationTests : IDisposable
     [Fact]
     public void Validator_returns_no_errors_for_unique_keys()
     {
-        var fragments = new[]
+        var entries = new[]
         {
-            FragWith("fragA", "items", "k1"),
-            FragWith("fragB", "items", "k2"),
+            EntryWith("fragA.frag.xml", "k1"),
+            EntryWith("fragB.frag.xml", "k2"),
         };
 
-        var diagnostics = LocalizationValidator.Validate(fragments);
+        var diagnostics = LocalizationValidator.Validate(entries);
 
         Assert.Empty(diagnostics);
     }
@@ -293,13 +282,13 @@ public class LocalizationTests : IDisposable
     [Fact]
     public void Validator_returns_error_for_duplicate_key()
     {
-        var fragments = new[]
+        var entries = new[]
         {
-            FragWith("fragA", "items", "dupKey"),
-            FragWith("fragB", "items", "dupKey"),
+            EntryWith("fragA.frag.xml", "dupKey"),
+            EntryWith("fragB.frag.xml", "dupKey"),
         };
 
-        var diagnostics = LocalizationValidator.Validate(fragments);
+        var diagnostics = LocalizationValidator.Validate(entries);
 
         Assert.Single(diagnostics);
         Assert.Equal(DiagnosticSeverity.Error, diagnostics[0].Severity);
@@ -307,30 +296,30 @@ public class LocalizationTests : IDisposable
     }
 
     [Fact]
-    public void Validator_identifies_first_occurrence_in_error_message()
+    public void Validator_identifies_first_occurrence_source_file_in_error_message()
     {
-        var fragments = new[]
+        var entries = new[]
         {
-            FragWith("fragA", "items", "shared"),
-            FragWith("fragB", "items", "shared"),
+            EntryWith("fragA.frag.xml", "shared"),
+            EntryWith("fragB.frag.xml", "shared"),
         };
 
-        var diagnostics = LocalizationValidator.Validate(fragments);
+        var diagnostics = LocalizationValidator.Validate(entries);
 
-        Assert.Contains("fragA", diagnostics[0].Message);
+        Assert.Contains("fragA.frag.xml", diagnostics[0].Message);
     }
 
     [Fact]
     public void Validator_reports_each_duplicate_occurrence_separately()
     {
-        var fragments = new[]
+        var entries = new[]
         {
-            FragWith("fragA", "items", "key"),
-            FragWith("fragB", "items", "key"),
-            FragWith("fragC", "items", "key"),
+            EntryWith("fragA.frag.xml", "key"),
+            EntryWith("fragB.frag.xml", "key"),
+            EntryWith("fragC.frag.xml", "key"),
         };
 
-        var diagnostics = LocalizationValidator.Validate(fragments);
+        var diagnostics = LocalizationValidator.Validate(entries);
 
         Assert.Equal(2, diagnostics.Count);
     }
@@ -340,9 +329,9 @@ public class LocalizationTests : IDisposable
     [Fact]
     public void Generator_writes_localization_txt_with_correct_header()
     {
-        var fragments = new[] { FragWith("frag", "items", "myKey", english: "My Item") };
+        var entries = new[] { EntryWith("frag.xml", "myKey", english: "My Item") };
 
-        LocalizationGenerator.Generate(fragments, _tempDir, dryRun: false, _nullLogger);
+        LocalizationGenerator.Generate(entries, _tempDir, dryRun: false, _nullLogger);
 
         var path = Path.Combine(_tempDir, "Config", "Localization.txt");
         Assert.True(File.Exists(path));
@@ -354,9 +343,9 @@ public class LocalizationTests : IDisposable
     [Fact]
     public void Generator_writes_correct_row_values()
     {
-        var fragments = new[] { FragWith("frag", "items", "myKey", english: "My Item", russian: "Мой предмет") };
+        var entries = new[] { EntryWith("frag.xml", "myKey", english: "My Item", russian: "Мой предмет") };
 
-        LocalizationGenerator.Generate(fragments, _tempDir, dryRun: false, _nullLogger);
+        LocalizationGenerator.Generate(entries, _tempDir, dryRun: false, _nullLogger);
 
         var path = Path.Combine(_tempDir, "Config", "Localization.txt");
         var lines = File.ReadAllLines(path);
@@ -369,9 +358,7 @@ public class LocalizationTests : IDisposable
     [Fact]
     public void Generator_does_not_create_file_when_no_localization_entries()
     {
-        var fragments = new[] { FragWithBody("frag", "items") };
-
-        LocalizationGenerator.Generate(fragments, _tempDir, dryRun: false, _nullLogger);
+        LocalizationGenerator.Generate([], _tempDir, dryRun: false, _nullLogger);
 
         Assert.False(File.Exists(Path.Combine(_tempDir, "Config", "Localization.txt")));
     }
@@ -379,9 +366,9 @@ public class LocalizationTests : IDisposable
     [Fact]
     public void Generator_dry_run_does_not_create_file()
     {
-        var fragments = new[] { FragWith("frag", "items", "k", english: "x") };
+        var entries = new[] { EntryWith("frag.xml", "k", english: "x") };
 
-        LocalizationGenerator.Generate(fragments, _tempDir, dryRun: true, _nullLogger);
+        LocalizationGenerator.Generate(entries, _tempDir, dryRun: true, _nullLogger);
 
         Assert.False(File.Exists(Path.Combine(_tempDir, "Config", "Localization.txt")));
     }
@@ -389,9 +376,9 @@ public class LocalizationTests : IDisposable
     [Fact]
     public void Generator_output_is_utf8_without_bom()
     {
-        var fragments = new[] { FragWith("frag", "items", "k", english: "hello") };
+        var entries = new[] { EntryWith("frag.xml", "k", english: "hello") };
 
-        LocalizationGenerator.Generate(fragments, _tempDir, dryRun: false, _nullLogger);
+        LocalizationGenerator.Generate(entries, _tempDir, dryRun: false, _nullLogger);
 
         var path = Path.Combine(_tempDir, "Config", "Localization.txt");
         var rawBytes = File.ReadAllBytes(path);
@@ -402,15 +389,15 @@ public class LocalizationTests : IDisposable
     }
 
     [Fact]
-    public void Generator_rows_are_written_in_resolved_fragment_order()
+    public void Generator_rows_are_written_in_input_order()
     {
-        var fragments = new[]
+        var entries = new[]
         {
-            FragWith("fragA", "items", "first", english: "First"),
-            FragWith("fragB", "items", "second", english: "Second"),
+            EntryWith("a.frag.xml", "first", english: "First"),
+            EntryWith("b.frag.xml", "second", english: "Second"),
         };
 
-        LocalizationGenerator.Generate(fragments, _tempDir, dryRun: false, _nullLogger);
+        LocalizationGenerator.Generate(entries, _tempDir, dryRun: false, _nullLogger);
 
         var path = Path.Combine(_tempDir, "Config", "Localization.txt");
         var lines = File.ReadAllLines(path);
@@ -422,9 +409,9 @@ public class LocalizationTests : IDisposable
     [Fact]
     public void Generator_csv_escapes_commas_in_values()
     {
-        var fragments = new[] { FragWith("frag", "items", "k", english: "Hello, world") };
+        var entries = new[] { EntryWith("frag.xml", "k", english: "Hello, world") };
 
-        LocalizationGenerator.Generate(fragments, _tempDir, dryRun: false, _nullLogger);
+        LocalizationGenerator.Generate(entries, _tempDir, dryRun: false, _nullLogger);
 
         var path = Path.Combine(_tempDir, "Config", "Localization.txt");
         var row = File.ReadAllLines(path)[1];
@@ -434,9 +421,9 @@ public class LocalizationTests : IDisposable
     [Fact]
     public void Generator_csv_escapes_quotes_in_values()
     {
-        var fragments = new[] { FragWith("frag", "items", "k", english: "Say \"hi\"") };
+        var entries = new[] { EntryWith("frag.xml", "k", english: "Say \"hi\"") };
 
-        LocalizationGenerator.Generate(fragments, _tempDir, dryRun: false, _nullLogger);
+        LocalizationGenerator.Generate(entries, _tempDir, dryRun: false, _nullLogger);
 
         var path = Path.Combine(_tempDir, "Config", "Localization.txt");
         var row = File.ReadAllLines(path)[1];
@@ -448,14 +435,11 @@ public class LocalizationTests : IDisposable
     [Fact]
     public void Output_generator_writes_both_config_and_localization()
     {
-        var fragments = new[]
-        {
-            FragWithLocAndBody("frag", "items",
-                bodyXml: "<append xpath=\"/items\"/>",
-                key: "myKey", english: "My Item"),
-        };
+        var fragment = new Fragment("id:frag", "frag", "items", [], "frag.frag.xml",
+            [XElement.Parse("<append xpath=\"/items\"/>")]);
+        var entries = new[] { EntryWith("frag.frag.xml", "myKey", english: "My Item") };
 
-        OutputGenerator.Generate(fragments, _tempDir, dryRun: false, clean: false, _nullLogger);
+        OutputGenerator.Generate([fragment], entries, _tempDir, dryRun: false, clean: false, _nullLogger);
 
         Assert.True(File.Exists(Path.Combine(_tempDir, "Config", "items.xml")));
         Assert.True(File.Exists(Path.Combine(_tempDir, "Config", "Localization.txt")));
@@ -464,14 +448,11 @@ public class LocalizationTests : IDisposable
     [Fact]
     public void Output_generator_dry_run_does_not_write_localization()
     {
-        var fragments = new[]
-        {
-            FragWithLocAndBody("frag", "items",
-                bodyXml: "<append/>",
-                key: "k", english: "x"),
-        };
+        var fragment = new Fragment("id:frag", "frag", "items", [], "frag.frag.xml",
+            [XElement.Parse("<append/>")]);
+        var entries = new[] { EntryWith("frag.frag.xml", "k", english: "x") };
 
-        OutputGenerator.Generate(fragments, _tempDir, dryRun: true, clean: false, _nullLogger);
+        OutputGenerator.Generate([fragment], entries, _tempDir, dryRun: true, clean: false, _nullLogger);
 
         Assert.False(File.Exists(Path.Combine(_tempDir, "Config", "Localization.txt")));
     }
@@ -485,70 +466,30 @@ public class LocalizationTests : IDisposable
         return path;
     }
 
-    private static Fragment FragWith(
-        string id,
-        string target,
+    private static LocalizationEntry EntryWith(
+        string sourceFile,
         string key,
         string english = "",
         string russian = "") =>
-        new(id, id, target, [],
-            $"{id}.frag.xml",
-            [],
-            [new LocalizationEntry(
-                Key: key,
-                File: target,
-                Type: "Item",
-                UsedInMainMenu: string.Empty,
-                NoTranslate: string.Empty,
-                English: english,
-                Context: string.Empty,
-                German: string.Empty,
-                Spanish: string.Empty,
-                French: string.Empty,
-                Italian: string.Empty,
-                Japanese: string.Empty,
-                Koreana: string.Empty,
-                Polish: string.Empty,
-                Brazilian: string.Empty,
-                Russian: russian,
-                Turkish: string.Empty,
-                Schinese: string.Empty,
-                Tchinese: string.Empty,
-                SourceFile: $"{id}.frag.xml",
-                ParentFragmentId: id)]);
-
-    private static Fragment FragWithBody(string id, string target) =>
-        new(id, id, target, [], $"{id}.frag.xml", [System.Xml.Linq.XElement.Parse("<append/>")], []);
-
-    private static Fragment FragWithLocAndBody(
-        string id,
-        string target,
-        string bodyXml,
-        string key,
-        string english) =>
-        new(id, id, target, [],
-            $"{id}.frag.xml",
-            [System.Xml.Linq.XElement.Parse(bodyXml)],
-            [new LocalizationEntry(
-                Key: key,
-                File: target,
-                Type: "Item",
-                UsedInMainMenu: string.Empty,
-                NoTranslate: string.Empty,
-                English: english,
-                Context: string.Empty,
-                German: string.Empty,
-                Spanish: string.Empty,
-                French: string.Empty,
-                Italian: string.Empty,
-                Japanese: string.Empty,
-                Koreana: string.Empty,
-                Polish: string.Empty,
-                Brazilian: string.Empty,
-                Russian: string.Empty,
-                Turkish: string.Empty,
-                Schinese: string.Empty,
-                Tchinese: string.Empty,
-                SourceFile: $"{id}.frag.xml",
-                ParentFragmentId: id)]);
+        new(
+            Key: key,
+            File: "items",
+            Type: "Item",
+            UsedInMainMenu: string.Empty,
+            NoTranslate: string.Empty,
+            English: english,
+            Context: string.Empty,
+            German: string.Empty,
+            Spanish: string.Empty,
+            French: string.Empty,
+            Italian: string.Empty,
+            Japanese: string.Empty,
+            Koreana: string.Empty,
+            Polish: string.Empty,
+            Brazilian: string.Empty,
+            Russian: russian,
+            Turkish: string.Empty,
+            Schinese: string.Empty,
+            Tchinese: string.Empty,
+            SourceFile: sourceFile);
 }

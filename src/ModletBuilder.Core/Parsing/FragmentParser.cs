@@ -6,7 +6,7 @@ namespace ModletBuilder.Core.Parsing;
 
 internal static class FragmentParser
 {
-    internal static (IReadOnlyList<Fragment> Fragments, IReadOnlyList<Diagnostic> Diagnostics) Parse(string filePath)
+    internal static (IReadOnlyList<Fragment> Fragments, IReadOnlyList<LocalizationEntry> LocalizationEntries, IReadOnlyList<Diagnostic> Diagnostics) Parse(string filePath)
     {
         var diagnostics = new List<Diagnostic>();
         XDocument doc;
@@ -21,7 +21,7 @@ internal static class FragmentParser
                 DiagnosticSeverity.Error,
                 $"Malformed XML: {ex.Message}",
                 filePath));
-            return ([], diagnostics);
+            return ([], [], diagnostics);
         }
         catch (Exception ex)
         {
@@ -29,7 +29,7 @@ internal static class FragmentParser
                 DiagnosticSeverity.Error,
                 $"Could not read file: {ex.Message}",
                 filePath));
-            return ([], diagnostics);
+            return ([], [], diagnostics);
         }
 
         var root = doc.Root;
@@ -41,7 +41,7 @@ internal static class FragmentParser
                 DiagnosticSeverity.Error,
                 $"Root element must be <modlet>, found {found}.",
                 filePath));
-            return ([], diagnostics);
+            return ([], [], diagnostics);
         }
 
         // Validate that <modlet> carries no attributes.
@@ -54,15 +54,28 @@ internal static class FragmentParser
                 filePath));
         }
 
-        // Report unexpected non-<fragment> children
-        foreach (var child in root.Elements().Where(e => e.Name.LocalName != "fragment"))
+        // Report unexpected children — only <fragment> and <localization> are allowed at modlet level.
+        foreach (var child in root.Elements()
+            .Where(e => e.Name.LocalName != "fragment" && e.Name.LocalName != "localization"))
         {
             diagnostics.Add(new Diagnostic(
                 DiagnosticSeverity.Error,
-                $"Unexpected element <{child.Name.LocalName}> inside <modlet>. Only <fragment> elements are allowed.",
+                $"Unexpected element <{child.Name.LocalName}> inside <modlet>. " +
+                "Only <fragment> and <localization> elements are allowed.",
                 filePath));
         }
 
+        // ── Parse <localization> blocks at modlet level ───────────────────────
+        var localizationEntries = new List<LocalizationEntry>();
+        foreach (var locEl in root.Elements().Where(e => e.Name.LocalName == "localization"))
+        {
+            var (entry, locDiagnostics) = ParseLocalizationElement(locEl, filePath);
+            diagnostics.AddRange(locDiagnostics);
+            if (entry is not null)
+                localizationEntries.Add(entry);
+        }
+
+        // ── Parse <fragment> elements ─────────────────────────────────────────
         var fragmentElements = root.Elements()
             .Where(e => e.Name.LocalName == "fragment")
             .ToList();
@@ -77,7 +90,7 @@ internal static class FragmentParser
                     "Source document <modlet> contains no <fragment> elements.",
                     filePath));
             }
-            return ([], diagnostics);
+            return ([], localizationEntries, diagnostics);
         }
 
         var fragments = new List<Fragment>(fragmentElements.Count);
@@ -90,7 +103,7 @@ internal static class FragmentParser
                 fragments.Add(fragment);
         }
 
-        return (fragments, diagnostics);
+        return (fragments, localizationEntries, diagnostics);
     }
 
     private static (Fragment? Fragment, IReadOnlyList<Diagnostic> Diagnostics) ParseFragmentElement(
@@ -142,32 +155,27 @@ internal static class FragmentParser
 
         var internalId = CreateInternalId(el, filePath, fragmentOrdinal);
 
-        var body = new List<XElement>();
-        var localizationEntries = new List<LocalizationEntry>();
-
-        foreach (var child in el.Elements())
+        // Detect misplaced <localization> blocks inside <fragment> and guide the user.
+        foreach (var child in el.Elements().Where(c => c.Name.LocalName == "localization"))
         {
-            if (child.Name.LocalName == "localization")
-            {
-                var (entry, locDiagnostics) = ParseLocalizationElement(child, filePath, internalId);
-                diagnostics.AddRange(locDiagnostics);
-                if (entry is not null)
-                    localizationEntries.Add(entry);
-            }
-            else
-            {
-                body.Add(child);
-            }
+            diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                $"<localization> must be declared at the <modlet> level, not inside <fragment> " +
+                $"{DescribeFragment(name, internalId)}. Move it to be a direct child of <modlet>.",
+                filePath));
         }
 
         if (diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
             return (null, diagnostics);
 
-        return (new Fragment(internalId, name, target!, requires, filePath, body, localizationEntries), diagnostics);
+        // All children of <fragment> are pure XML payload — written verbatim to the target file.
+        var body = el.Elements().ToList();
+
+        return (new Fragment(internalId, name, target!, requires, filePath, body), diagnostics);
     }
 
     private static (LocalizationEntry? Entry, IReadOnlyList<Diagnostic> Diagnostics) ParseLocalizationElement(
-        XElement el, string filePath, string parentFragmentId)
+        XElement el, string filePath)
     {
         var diagnostics = new List<Diagnostic>();
 
@@ -266,8 +274,7 @@ internal static class FragmentParser
             Turkish: Lang("turkish"),
             Schinese: Lang("schinese"),
             Tchinese: Lang("tchinese"),
-            SourceFile: filePath,
-            ParentFragmentId: parentFragmentId);
+            SourceFile: filePath);
 
         return (entry, diagnostics);
     }

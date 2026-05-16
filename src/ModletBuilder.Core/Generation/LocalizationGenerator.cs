@@ -13,13 +13,12 @@ internal static class LocalizationGenerator
         "german,spanish,french,italian,japanese,koreana,polish,brazilian,russian,turkish,schinese,tchinese";
 
     internal static IReadOnlyList<Diagnostic> Generate(
-        IReadOnlyList<Fragment> fragments,
+        IReadOnlyList<LocalizationEntry> entries,
         string outDir,
         bool dryRun,
         BuildLogger logger)
     {
         var diagnostics = new List<Diagnostic>();
-        var entries = fragments.SelectMany(f => f.LocalizationEntries).ToList();
 
         if (entries.Count == 0)
             return diagnostics;

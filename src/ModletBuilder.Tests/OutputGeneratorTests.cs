@@ -29,7 +29,7 @@ public class OutputGeneratorTests : IDisposable
     {
         var diagnostics = OutputGenerator.Generate(
             [Frag("a", "items", "<append xpath=\"/items\"><item name=\"x\"/></append>")],
-            _tempDir, dryRun: false, clean: false, _nullLogger);
+            [], _tempDir, dryRun: false, clean: false, _nullLogger);
 
         Assert.Empty(diagnostics);
 
@@ -46,7 +46,7 @@ public class OutputGeneratorTests : IDisposable
     {
         OutputGenerator.Generate(
             [Frag("a", "items", "<append/>")],
-            _tempDir, dryRun: false, clean: false, _nullLogger);
+            [], _tempDir, dryRun: false, clean: false, _nullLogger);
 
         var outputFile = Path.Combine(_tempDir, "Config", "items.xml");
         var rawBytes = File.ReadAllBytes(outputFile);
@@ -60,7 +60,7 @@ public class OutputGeneratorTests : IDisposable
     {
         OutputGenerator.Generate(
             [Frag("a", "items", "<append/>")],
-            _tempDir, dryRun: false, clean: false, _nullLogger);
+            [], _tempDir, dryRun: false, clean: false, _nullLogger);
 
         var outputFile = Path.Combine(_tempDir, "Config", "items.xml");
         var rawBytes = File.ReadAllBytes(outputFile);
@@ -76,7 +76,7 @@ public class OutputGeneratorTests : IDisposable
     {
         OutputGenerator.Generate(
             [Frag("a", "items", "<append id=\"1\"/>"), Frag("b", "items", "<append id=\"2\"/>")],
-            _tempDir, dryRun: false, clean: false, _nullLogger);
+            [], _tempDir, dryRun: false, clean: false, _nullLogger);
 
         var doc = XDocument.Load(Path.Combine(_tempDir, "Config", "items.xml"));
         var appends = doc.Root!.Elements("append").ToList();
@@ -90,7 +90,7 @@ public class OutputGeneratorTests : IDisposable
     {
         OutputGenerator.Generate(
             [Frag("a", "items", "<append/>"), Frag("b", "recipes", "<append/>")],
-            _tempDir, dryRun: false, clean: false, _nullLogger);
+            [], _tempDir, dryRun: false, clean: false, _nullLogger);
 
         Assert.True(File.Exists(Path.Combine(_tempDir, "Config", "items.xml")));
         Assert.True(File.Exists(Path.Combine(_tempDir, "Config", "recipes.xml")));
@@ -101,7 +101,7 @@ public class OutputGeneratorTests : IDisposable
     {
         OutputGenerator.Generate(
             [Frag("a", "xui_windows", "<window name=\"x\"/>")],
-            _tempDir, dryRun: false, clean: false, _nullLogger);
+            [], _tempDir, dryRun: false, clean: false, _nullLogger);
 
         var expected = Path.Combine(_tempDir, "Config", "XUi", "windows.xml");
         Assert.True(File.Exists(expected));
@@ -112,7 +112,7 @@ public class OutputGeneratorTests : IDisposable
     {
         OutputGenerator.Generate(
             [Frag("a", "items", "<append/>")],
-            _tempDir, dryRun: true, clean: false, _nullLogger);
+            [], _tempDir, dryRun: true, clean: false, _nullLogger);
 
         Assert.False(Directory.Exists(Path.Combine(_tempDir, "Config")));
     }
@@ -124,7 +124,7 @@ public class OutputGeneratorTests : IDisposable
 
         var diagnostics = OutputGenerator.Generate(
             [Frag("a", "items", "<append/>")],
-            missing, dryRun: true, clean: false, _nullLogger);
+            [], missing, dryRun: true, clean: false, _nullLogger);
 
         // Dry run must never fail due to a missing output directory — it should only warn.
         Assert.DoesNotContain(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
@@ -138,7 +138,7 @@ public class OutputGeneratorTests : IDisposable
 
         OutputGenerator.Generate(
             [Frag("a", "items", "<append/>")],
-            missing, dryRun: true, clean: false, _nullLogger);
+            [], missing, dryRun: true, clean: false, _nullLogger);
 
         Assert.False(Directory.Exists(missing));
     }
@@ -148,7 +148,7 @@ public class OutputGeneratorTests : IDisposable
     {
         OutputGenerator.Generate(
             [Frag("a", "items", "<append/>")],
-            _tempDir, dryRun: false, clean: false, _nullLogger);
+            [], _tempDir, dryRun: false, clean: false, _nullLogger);
 
         Assert.True(Directory.Exists(Path.Combine(_tempDir, "Config")));
     }
@@ -161,7 +161,7 @@ public class OutputGeneratorTests : IDisposable
 
         OutputGenerator.Generate(
             [Frag("a", "items", "<append/>")],
-            _tempDir, dryRun: false, clean: true, _nullLogger);
+            [], _tempDir, dryRun: false, clean: true, _nullLogger);
 
         Assert.False(File.Exists(Path.Combine(_tempDir, "stale.txt")), "Stale file must be removed by --clean.");
         Assert.True(File.Exists(Path.Combine(_tempDir, "Config", "items.xml")));
@@ -174,7 +174,7 @@ public class OutputGeneratorTests : IDisposable
 
         OutputGenerator.Generate(
             [Frag("a", "items", "<append/>")],
-            _tempDir, dryRun: true, clean: true, _nullLogger);
+            [], _tempDir, dryRun: true, clean: true, _nullLogger);
 
         Assert.True(File.Exists(Path.Combine(_tempDir, "stale.txt")),
             "Dry run with --clean must not delete files.");
@@ -186,12 +186,12 @@ public class OutputGeneratorTests : IDisposable
         // First build.
         OutputGenerator.Generate(
             [Frag("a", "items", "<append id=\"1\"/>")],
-            _tempDir, dryRun: false, clean: false, _nullLogger);
+            [], _tempDir, dryRun: false, clean: false, _nullLogger);
 
         // Second build with different content — must overwrite silently.
         var diagnostics = OutputGenerator.Generate(
             [Frag("a", "items", "<append id=\"2\"/>")],
-            _tempDir, dryRun: false, clean: false, _nullLogger);
+            [], _tempDir, dryRun: false, clean: false, _nullLogger);
 
         Assert.Empty(diagnostics);
         var doc = XDocument.Load(Path.Combine(_tempDir, "Config", "items.xml"));
@@ -207,7 +207,7 @@ public class OutputGeneratorTests : IDisposable
                 Frag("b", "recipes", "<append/>"),
                 Frag("c", "progression", "<set xpath=\"/x\">1</set>")
             ],
-            _tempDir, dryRun: false, clean: false, _nullLogger);
+            [], _tempDir, dryRun: false, clean: false, _nullLogger);
 
         var xmlFiles = Directory.GetFiles(
             Path.Combine(_tempDir, "Config"), "*.xml", SearchOption.TopDirectoryOnly);
@@ -219,7 +219,7 @@ public class OutputGeneratorTests : IDisposable
     {
         OutputGenerator.Generate(
             [Frag("a", "xui_menu_windows", "<window name=\"x\"/>")],
-            _tempDir, dryRun: false, clean: false, _nullLogger);
+            [], _tempDir, dryRun: false, clean: false, _nullLogger);
 
         var expected = Path.Combine(_tempDir, "Config", "XUi_Menu", "windows.xml");
         Assert.True(File.Exists(expected));
@@ -230,7 +230,7 @@ public class OutputGeneratorTests : IDisposable
     {
         OutputGenerator.Generate(
             [Frag(null, "items", "<append xpath=\"/items\"><item name=\"x\"/></append>", "source/items.frag.xml#L1#F0")],
-            _tempDir, dryRun: false, clean: false, _nullLogger);
+            [], _tempDir, dryRun: false, clean: false, _nullLogger);
 
         var doc = XDocument.Load(Path.Combine(_tempDir, "Config", "items.xml"));
 
@@ -242,6 +242,6 @@ public class OutputGeneratorTests : IDisposable
         Frag(name, target, bodyXml, internalId: $"id:{name}");
 
     private static Fragment Frag(string? name, string target, string bodyXml, string internalId) =>
-        new(internalId, name, target, [], $"{name ?? internalId}.frag.xml", [XElement.Parse(bodyXml)], []);
+        new(internalId, name, target, [], $"{name ?? internalId}.frag.xml", [XElement.Parse(bodyXml)]);
 }
 

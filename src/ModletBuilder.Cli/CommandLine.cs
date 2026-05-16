@@ -66,11 +66,13 @@ internal static class CommandLine
 
         // ── Stage 0: Fragment parsing ─────────────────────────────────────────
         var fragments = new List<Fragment>();
+        var localizationEntries = new List<LocalizationEntry>();
         foreach (var file in files)
         {
-            var (fileFragments, parseDiagnostics) = FragmentParser.Parse(file);
+            var (fileFragments, fileLocEntries, parseDiagnostics) = FragmentParser.Parse(file);
             allDiagnostics.AddRange(parseDiagnostics);
             fragments.AddRange(fileFragments);
+            localizationEntries.AddRange(fileLocEntries);
         }
 
         logger.Debug($"Parsed {fragments.Count} fragment(s) from {files.Count} file(s).");
@@ -100,7 +102,7 @@ internal static class CommandLine
         logger.Debug($"Resolved order for {ordered.Count} fragment(s).");
 
         // ── Stage 1.5: Localization validation ───────────────────────────────
-        var localizationDiagnostics = LocalizationValidator.Validate(ordered);
+        var localizationDiagnostics = LocalizationValidator.Validate(localizationEntries);
         allDiagnostics.AddRange(localizationDiagnostics);
 
         if (HasErrors(allDiagnostics))
@@ -111,7 +113,7 @@ internal static class CommandLine
 
         // ── Stage 2: Output generation ────────────────────────────────────────
         var generateDiagnostics = OutputGenerator.Generate(
-            ordered, options.OutputDir, options.DryRun, options.Clean, logger);
+            ordered, localizationEntries, options.OutputDir, options.DryRun, options.Clean, logger);
         allDiagnostics.AddRange(generateDiagnostics);
 
         EmitDiagnostics(allDiagnostics, logger);
