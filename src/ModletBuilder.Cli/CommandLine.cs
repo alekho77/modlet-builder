@@ -6,6 +6,7 @@ using ModletBuilder.Core.Models;
 using ModletBuilder.Core.Parsing;
 using ModletBuilder.Core.Resolution;
 using ModletBuilder.Core.SourceDiscovery;
+using ModletBuilder.Core.Validation;
 
 internal static class CommandLine
 {
@@ -98,6 +99,16 @@ internal static class CommandLine
 
         logger.Debug($"Resolved order for {ordered.Count} fragment(s).");
 
+        // ── Stage 1.5: Localization validation ───────────────────────────────
+        var localizationDiagnostics = LocalizationValidator.Validate(ordered);
+        allDiagnostics.AddRange(localizationDiagnostics);
+
+        if (HasErrors(allDiagnostics))
+        {
+            EmitDiagnostics(allDiagnostics, logger);
+            return ExitCodes.BuildError;
+        }
+
         // ── Stage 2: Output generation ────────────────────────────────────────
         var generateDiagnostics = OutputGenerator.Generate(
             ordered, options.OutputDir, options.DryRun, options.Clean, logger);
@@ -165,6 +176,7 @@ internal static class CommandLine
         writer.WriteLine("                                 containing *.frag.xml files. Required.");
         writer.WriteLine("      --out <mod-dir>            Output mod directory. Required.");
         writer.WriteLine("                                 Config files are written to {mod-dir}/Config/.");
+        writer.WriteLine("                                 Localization.txt, when present, is also written to {mod-dir}/Config/.");
         writer.WriteLine("      --recursive                Scan source directories recursively.");
         writer.WriteLine("      --dry-run                  Validate sources, resolve dependencies, and");
         writer.WriteLine("                                 report what would be built — without writing files.");

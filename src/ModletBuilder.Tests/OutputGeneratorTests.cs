@@ -242,6 +242,6 @@ public class OutputGeneratorTests : IDisposable
         Frag(name, target, bodyXml, internalId: $"id:{name}");
 
     private static Fragment Frag(string? name, string target, string bodyXml, string internalId) =>
-        new(internalId, name, target, [], $"{name ?? internalId}.frag.xml", [XElement.Parse(bodyXml)]);
+        new(internalId, name, target, [], $"{name ?? internalId}.frag.xml", [XElement.Parse(bodyXml)], []);
 }
 

@@ -119,8 +119,8 @@ public class DependencyResolverTests
     public void Duplicate_name_diagnostic_includes_first_definition_source_file()
     {
         // The diagnostic for a duplicate must reference the source file of the FIRST definition.
-        var first = new Fragment("id:first", "a", "items", [], "first.frag.xml", []);
-        var second = new Fragment("id:second", "a", "recipes", [], "second.frag.xml", []);
+        var first = new Fragment("id:first", "a", "items", [], "first.frag.xml", [], []);
+        var second = new Fragment("id:second", "a", "recipes", [], "second.frag.xml", [], []);
 
         var (_, diagnostics) = DependencyResolver.Resolve([first, second]);
 
@@ -248,5 +248,6 @@ public class DependencyResolverTests
             target,
             requires ?? [],
             $"{name ?? internalId}.frag.xml",
+            [],
             []);
 }

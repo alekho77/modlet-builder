@@ -73,39 +73,38 @@ internal static class SampleTestHelper
     }
 
     /// <summary>
-    /// Asserts that every XML file in <paramref name="expectedDir"/>/Config/ has
-    /// a matching counterpart in <paramref name="outDir"/>/Config/ with identical
+    /// Asserts that every file under <paramref name="expectedDir"/> has
+    /// a matching counterpart under <paramref name="outDir"/> with identical
     /// content (line-ending-normalised), and that no extra files exist in the
-    /// actual output.
+    /// actual output tree.
     /// </summary>
     internal static void AssertOutputMatchesExpected(string outDir, string expectedDir)
     {
-        var expectedConfigDir = Path.Combine(expectedDir, "Config");
-        var actualConfigDir = Path.Combine(outDir, "Config");
-
-        Assert.True(Directory.Exists(actualConfigDir),
-            $"Output Config directory was not created: {actualConfigDir}");
+        Assert.True(Directory.Exists(expectedDir),
+            $"Expected directory does not exist: {expectedDir}");
+        Assert.True(Directory.Exists(outDir),
+            $"Output directory was not created: {outDir}");
 
         var expectedFiles = Directory
-            .GetFiles(expectedConfigDir, "*.xml", SearchOption.AllDirectories)
-            .Select(f => Path.GetRelativePath(expectedConfigDir, f))
+            .GetFiles(expectedDir, "*", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(expectedDir, f))
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToList();
 
         foreach (var relative in expectedFiles)
         {
-            var actualFile = Path.Combine(actualConfigDir, relative);
+            var actualFile = Path.Combine(outDir, relative);
             Assert.True(File.Exists(actualFile), $"Expected output file missing: {relative}");
 
             var expectedContent = NormalizeLineEndings(
-                File.ReadAllText(Path.Combine(expectedConfigDir, relative)));
+                File.ReadAllText(Path.Combine(expectedDir, relative)));
             var actualContent = NormalizeLineEndings(File.ReadAllText(actualFile));
             Assert.Equal(expectedContent, actualContent);
         }
 
         var actualFiles = Directory
-            .GetFiles(actualConfigDir, "*.xml", SearchOption.AllDirectories)
-            .Select(f => Path.GetRelativePath(actualConfigDir, f))
+            .GetFiles(outDir, "*", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(outDir, f))
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToList();
 

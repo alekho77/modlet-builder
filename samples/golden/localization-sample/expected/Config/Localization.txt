@@ -1,0 +1,4 @@
+Key,File,Type,UsedInMainMenu,NoTranslate,english,Context / Alternate Text,german,spanish,french,italian,japanese,koreana,polish,brazilian,russian,turkish,schinese,tchinese
+evSampleItem,items,Item,,,Sample Item,,Beispielobjekt,,,,,,,,Образцовый предмет,,,
+evSampleItemDesc,items,Item,,,A demonstration item for modlet-builder localization support.,Item description,,,,,,,,,Демонстрационный предмет для поддержки локализации в modlet-builder.,,,
+evSampleRecipe,items,Item,,,Sample Recipe,,,,,,,,,,Образцовый рецепт,,,

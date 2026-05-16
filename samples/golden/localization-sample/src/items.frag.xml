@@ -1,0 +1,37 @@
+<modlet>
+
+  <!-- Item definition fragment: defines the item XML patch AND its display strings inline. -->
+  <fragment name="localization-sample.items.base" target="items">
+    <localization key="evSampleItem" file="items" type="Item">
+      <english text="Sample Item"/>
+      <russian text="Образцовый предмет"/>
+      <german text="Beispielobjekt"/>
+    </localization>
+    <localization key="evSampleItemDesc" file="items" type="Item"
+      context="Item description">
+      <english text="A demonstration item for modlet-builder localization support."/>
+      <russian text="Демонстрационный предмет для поддержки локализации в modlet-builder."/>
+    </localization>
+    <append xpath="/items">
+      <item name="evSampleItem">
+        <property name="Extends" value="meleeToolRepairT1ClawHammer"/>
+        <property name="DescriptionKey" value="evSampleItemDesc"/>
+      </item>
+    </append>
+  </fragment>
+
+  <!-- Recipe fragment: depends on the item, adds its own localization key. -->
+  <fragment name="localization-sample.recipes.base" target="recipes"
+    requires="localization-sample.items.base">
+    <localization key="evSampleRecipe" file="items" type="Item">
+      <english text="Sample Recipe"/>
+      <russian text="Образцовый рецепт"/>
+    </localization>
+    <append xpath="/recipes">
+      <recipe name="evSampleItem" count="1" craft_area="workbench">
+        <ingredient name="resourceWood" count="10"/>
+      </recipe>
+    </append>
+  </fragment>
+
+</modlet>

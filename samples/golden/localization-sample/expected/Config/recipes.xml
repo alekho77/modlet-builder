@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <append xpath="/recipes">
+      <recipe name="evSampleItem" count="1" craft_area="workbench">
+        <ingredient name="resourceWood" count="10" />
+      </recipe>
+    </append>
+</config>

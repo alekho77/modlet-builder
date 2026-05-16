@@ -319,13 +319,84 @@ The `target` attribute in a fragment file must be one of the values below. Each 
 Known limitations for this phase:
 
 - No `ModInfo.xml` generation.
-- No `Localization.txt` support.
 - Only `*.frag.xml` source format is supported.
 - `target` values not in the table above are hard errors; no custom target extensibility yet.
 
 **Breaking change:** the `--out` option expects a **single mod directory**. Config files are written to `{mod-dir}/Config/`. To build the same sources into two different mods, run `build` twice with different `--out` values. The `hint` attribute on `<modlet>` and `<fragment>` elements and the `--targets` option are no longer supported and will produce errors.
 
 **Breaking change (previous):** source documents must use root element `<modlet>`. The previous root `<fragment>` format is not supported.
+
+## Localization
+
+`modlet-builder` can generate `Config/Localization.txt` alongside your XML config files. Place `<localization>` blocks directly inside `<fragment>` elements. The blocks are build metadata: they are stripped from the generated XML and assembled into a single `Config/Localization.txt` in the 7 Days to Die CSV format.
+
+### Localization block format
+
+```xml
+<fragment name="mymod.items.base" target="items">
+  <localization key="myItemName" file="items" type="Item"
+    context="Display name" usedInMainMenu="" noTranslate="">
+    <english text="My Item"/>
+    <russian text="Мой предмет"/>
+    <german text="Mein Gegenstand"/>
+  </localization>
+  <localization key="myItemDesc" file="items" type="Item"
+    context="Item description">
+    <english text="A custom item added by the mod."/>
+  </localization>
+  <append xpath="/items">
+    <item name="myItem">
+      <property name="DescriptionKey" value="myItemDesc"/>
+    </item>
+  </append>
+</fragment>
+```
+
+### Localization block attributes
+
+| Attribute | Required | Description |
+| --------- | -------- | ----------- |
+| `key` | Yes | Unique localization key. Must be unique across all fragments in the build; duplicates are a build error. |
+| `file` | Yes | The `File` column value in `Localization.txt`. Typically matches the fragment's `target`. |
+| `type` | Yes | The `Type` column value in `Localization.txt` (e.g. `Item`, `Block`). |
+| `context` | No | The `Context / Alternate Text` column value. |
+| `usedInMainMenu` | No | The `UsedInMainMenu` column value. |
+| `noTranslate` | No | The `NoTranslate` column value. |
+
+### Supported language elements
+
+Each `<localization>` block may contain zero or more of these child elements. Absent languages produce empty CSV cells.
+
+`english`, `german`, `spanish`, `french`, `italian`, `japanese`, `koreana`, `polish`, `brazilian`, `russian`, `turkish`, `schinese`, `tchinese`
+
+Each language element requires a `text` attribute:
+
+```xml
+<english text="My Item"/>
+```
+
+### Output
+
+When any fragment contains at least one `<localization>` block, the build produces:
+
+```text
+{mod-dir}/
+└─ Config/
+   ├─ items.xml
+   └─ Localization.txt
+```
+
+The CSV uses the exact column order from `Localization.txt`:
+
+```text
+Key,File,Type,UsedInMainMenu,NoTranslate,english,Context / Alternate Text,german,...
+```
+
+Row order follows the dependency-resolved fragment order, then source order within each fragment. Values containing commas, quotes, or newlines are quoted per RFC 4180. The file is UTF-8 without BOM.
+
+### Duplicate key rule
+
+Two `<localization>` blocks with the same `key` across any fragments are a build error. The error message identifies both the duplicate and the first definition location. No output files are written when duplicate keys are detected.
 
 ## License
 

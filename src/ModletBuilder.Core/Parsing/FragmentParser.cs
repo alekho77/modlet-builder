@@ -140,10 +140,136 @@ internal static class FragmentParser
         var requires = requiresAttr
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        var body = el.Elements().ToList();
-
         var internalId = CreateInternalId(el, filePath, fragmentOrdinal);
-        return (new Fragment(internalId, name, target!, requires, filePath, body), diagnostics);
+
+        var body = new List<XElement>();
+        var localizationEntries = new List<LocalizationEntry>();
+
+        foreach (var child in el.Elements())
+        {
+            if (child.Name.LocalName == "localization")
+            {
+                var (entry, locDiagnostics) = ParseLocalizationElement(child, filePath, internalId);
+                diagnostics.AddRange(locDiagnostics);
+                if (entry is not null)
+                    localizationEntries.Add(entry);
+            }
+            else
+            {
+                body.Add(child);
+            }
+        }
+
+        if (diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
+            return (null, diagnostics);
+
+        return (new Fragment(internalId, name, target!, requires, filePath, body, localizationEntries), diagnostics);
+    }
+
+    private static (LocalizationEntry? Entry, IReadOnlyList<Diagnostic> Diagnostics) ParseLocalizationElement(
+        XElement el, string filePath, string parentFragmentId)
+    {
+        var diagnostics = new List<Diagnostic>();
+
+        var key = el.Attribute("key")?.Value;
+        var file = el.Attribute("file")?.Value;
+        var type = el.Attribute("type")?.Value;
+
+        if (string.IsNullOrWhiteSpace(key))
+            diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
+                "Localization block is missing required attribute 'key'.", filePath));
+        if (string.IsNullOrWhiteSpace(file))
+            diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
+                "Localization block is missing required attribute 'file'.", filePath));
+        if (string.IsNullOrWhiteSpace(type))
+            diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
+                "Localization block is missing required attribute 'type'.", filePath));
+
+        var usedInMainMenu = el.Attribute("usedInMainMenu")?.Value ?? string.Empty;
+        var noTranslate = el.Attribute("noTranslate")?.Value ?? string.Empty;
+        var context = el.Attribute("context")?.Value ?? string.Empty;
+
+        var knownAttribs = new HashSet<string>(StringComparer.Ordinal)
+            { "key", "file", "type", "usedInMainMenu", "noTranslate", "context" };
+        foreach (var attr in el.Attributes())
+        {
+            if (!knownAttribs.Contains(attr.Name.LocalName))
+            {
+                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
+                    $"Unknown attribute '{attr.Name.LocalName}' on <localization> block. " +
+                    $"Allowed attributes are: key, file, type, usedInMainMenu, noTranslate, context.",
+                    filePath));
+            }
+        }
+
+        if (diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
+            return (null, diagnostics);
+
+        var seenLanguages = new HashSet<string>(StringComparer.Ordinal);
+        var langValues = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var langEl in el.Elements())
+        {
+            var lang = langEl.Name.LocalName;
+
+            if (!KnownLanguages.IsKnown(lang))
+            {
+                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
+                    $"Unknown language element <{lang}> in <localization key=\"{key}\">. " +
+                    $"Supported languages: {string.Join(", ", KnownLanguages.All)}.",
+                    filePath));
+                continue;
+            }
+
+            if (!seenLanguages.Add(lang))
+            {
+                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
+                    $"Duplicate language element <{lang}> in <localization key=\"{key}\">.",
+                    filePath));
+                continue;
+            }
+
+            var text = langEl.Attribute("text")?.Value;
+            if (text is null)
+            {
+                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error,
+                    $"Language element <{lang}> in <localization key=\"{key}\"> is missing required attribute 'text'.",
+                    filePath));
+                continue;
+            }
+
+            langValues[lang] = text;
+        }
+
+        if (diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
+            return (null, diagnostics);
+
+        string Lang(string name) => langValues.TryGetValue(name, out var v) ? v : string.Empty;
+
+        var entry = new LocalizationEntry(
+            Key: key!,
+            File: file!,
+            Type: type!,
+            UsedInMainMenu: usedInMainMenu,
+            NoTranslate: noTranslate,
+            English: Lang("english"),
+            Context: context,
+            German: Lang("german"),
+            Spanish: Lang("spanish"),
+            French: Lang("french"),
+            Italian: Lang("italian"),
+            Japanese: Lang("japanese"),
+            Koreana: Lang("koreana"),
+            Polish: Lang("polish"),
+            Brazilian: Lang("brazilian"),
+            Russian: Lang("russian"),
+            Turkish: Lang("turkish"),
+            Schinese: Lang("schinese"),
+            Tchinese: Lang("tchinese"),
+            SourceFile: filePath,
+            ParentFragmentId: parentFragmentId);
+
+        return (entry, diagnostics);
     }
 
     private static string CreateInternalId(XElement element, string filePath, int fragmentOrdinal)

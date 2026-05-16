@@ -59,6 +59,9 @@ internal static class OutputGenerator
         var generateDiagnostics = GenerateOutput(fragments, outDir, logger);
         diagnostics.AddRange(generateDiagnostics);
 
+        var localizationDiagnostics = LocalizationGenerator.Generate(fragments, outDir, dryRun: false, logger);
+        diagnostics.AddRange(localizationDiagnostics);
+
         return diagnostics;
     }
 
@@ -91,6 +94,8 @@ internal static class OutputGenerator
         logger.Information(
             $"[DRY RUN] {fragments.Count} fragment(s) → {configFiles.Count} config file(s): " +
             string.Join(", ", configFiles.Select(f => $"Config/{f}")) + ".");
+
+        LocalizationGenerator.Generate(fragments, outDir, dryRun: true, logger);
     }
 
     // ── Real output ───────────────────────────────────────────────────────────
@@ -145,6 +150,10 @@ internal static class OutputGenerator
                     $"Could not write '{outputPath}': {ex.Message}"));
             }
         }
+
+        var localizationCount = fragments.Sum(f => f.LocalizationEntries.Count);
+        if (localizationCount > 0)
+            logger.Information($"{localizationCount} localization row(s) → {LocalizationGenerator.RelativePath}.");
 
         logger.Information(
             $"{fragments.Count} fragment(s) → {byTarget.Count} config file(s).");
