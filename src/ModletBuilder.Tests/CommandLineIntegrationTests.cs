@@ -5,7 +5,7 @@ public sealed class IntegrationCollection { }
 
 /// <summary>
 /// End-to-end tests that call <c>CommandLine.Run</c>. Filesystem-oriented cases are
-/// driven from samples/tests.yaml; pure CLI parser/dispatch cases remain in code.
+/// driven from samples/tests.yml; pure CLI parser/dispatch cases remain in code.
 /// </summary>
 [Collection("Integration")]
 public sealed class CommandLineIntegrationTests : IDisposable

@@ -117,7 +117,7 @@ internal static class SampleTestHelper
 
     private static IReadOnlyList<SampleTestCase> LoadAllCases()
     {
-        var yamlPath = Path.Combine(FindRepoRoot(), "samples", "tests.yaml");
+        var yamlPath = Path.Combine(FindRepoRoot(), "samples", "tests.yml");
         using var reader = File.OpenText(yamlPath);
 
         var deserializer = new DeserializerBuilder()
@@ -141,7 +141,7 @@ internal static class SampleTestHelper
         if (duplicateIds.Count > 0)
         {
             throw new InvalidOperationException(
-                $"Duplicate test case ids in samples/tests.yaml: {string.Join(", ", duplicateIds)}");
+                $"Duplicate test case ids in samples/tests.yml: {string.Join(", ", duplicateIds)}");
         }
     }
 

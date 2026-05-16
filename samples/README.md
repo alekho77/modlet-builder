@@ -7,7 +7,7 @@ The samples are used both as documentation and as test fixtures for verifying de
 
 ```text
 samples/
-├── tests.yaml                — YAML registry of sample-driven golden and integration test cases
+├── tests.yml                — YAML registry of sample-driven golden and integration test cases
 ├── real/                    — working mod excerpts compiled from real Nexus-published mods
 │   ├── alloy-motor-tool-parts/
 │   │   ├── src/             — *.frag.xml source documents
@@ -34,7 +34,7 @@ The golden tests in `SampleGoldenTests.cs` verify that re-building always produc
 identical output.
 
 The sample-driven integration and golden tests are defined centrally in
-`samples/tests.yaml`. That YAML file stores the English-only test name,
+`samples/tests.yml`. That YAML file stores the English-only test name,
 description, command parameters, source paths, output paths, expected result path,
 and file-system assertions for every sample-driven case.
 
@@ -45,7 +45,7 @@ id is not written in source XML and cannot be used in `requires`.
 
 ## YAML test registry
 
-`samples/tests.yaml` is the single source of truth for sample-driven test data.
+`samples/tests.yml` is the single source of truth for sample-driven test data.
 The C# test classes load that YAML file and execute the listed cases as xUnit
 theories instead of keeping per-case paths and command-line arguments hardcoded in
 test methods.
@@ -56,12 +56,62 @@ Path values in the YAML file follow these rules:
 - Temporary paths use tokens such as `{tempSrc}` and `{tempOut}`.
 - Expected golden output directories are referenced through `expected_result_path`.
 
-The current schema includes these top-level concepts for each test case:
+### Top-level test case fields
 
-- `id`, `name`, `description`, `category`
-- `command` with `sources`, `output`, flags, and verbosity
-- optional `inline_setup_files`, `pre_setup_files`, and `setup_directories`
-- `expected` with exit code, assertion mode, expected result path, and file-system checks
+| Field | Required | Description |
+| ----- | -------- | ----------- |
+| `id` | yes | Unique identifier used as the xUnit display name and as the name of the per-case temp directory. Must be unique across the file. |
+| `name` | yes | Short human-readable test title shown in test output. |
+| `description` | no | Longer explanation of what the test verifies. |
+
+### `command` block
+
+Describes the `modlet-builder` invocation to run.
+
+| Field | Required | Default | Description |
+| ----- | -------- | ------- | ----------- |
+| `verb` | no | `build` | The CLI sub-command to invoke. Currently only `build` is supported. |
+| `sources` | yes | — | List of source paths passed to `--src`. May contain `{tempSrc}` or repo-relative paths. |
+| `output` | no | `{tempOut}` | Output directory passed to `--out`. May contain `{tempOut}` or `{tempSrc}` tokens. |
+| `recursive` | no | `false` | Adds `--recursive` to the invocation. |
+| `dry_run` | no | `false` | Adds `--dry-run` to the invocation. |
+| `clean` | no | `false` | Adds `--clean` to the invocation. |
+| `verbosity` | no | `none` | Verbosity level passed to `--verbosity`. One of `debug`, `information`, `warning`, `error`, `none`. |
+
+### Path tokens
+
+Tokens are substituted before any path is used.
+
+| Token | Resolves to |
+| ----- | ----------- |
+| `{tempOut}` | `<system-temp>/<random>/<test-id>/out` — writable scratch output directory for this test case. |
+| `{tempSrc}` | `<system-temp>/<random>/<test-id>/src` — writable scratch source directory for this test case. |
+| `{tempRoot}` | `<system-temp>/<random>/<test-id>` — root of the per-case scratch area. |
+| `{repoRoot}` | Absolute path to the repository root (located by finding `ModletBuilder.sln`). |
+
+Relative paths that do not start with a token are resolved from `{repoRoot}`.
+
+### Setup blocks
+
+Use these blocks to create files or directories before the command runs.
+
+| Block | Description |
+| ----- | ----------- |
+| `setup_directories` | List of directory paths to create before the build. Supports tokens. |
+| `inline_setup_files` | List of `{ path, content }` entries written before the build. Use for source fragments generated dynamically per test. Supports tokens in `path`. |
+| `pre_setup_files` | List of `{ path, content }` entries written before the build. Use for pre-existing stale files that `--clean` or the build should handle. Supports tokens in `path`. |
+
+### `expected` block
+
+Assertions evaluated after the command exits.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `exit_code` | `int` | Expected process exit code. `0` = success, `1` = build error. If omitted, defaults to `0`. |
+| `expected_result_path` | `string` | Path to a directory whose `Config/*.xml` files must match the actual output exactly (content and set of files). Supports tokens and repo-relative paths. Omit if not doing a golden comparison. |
+| `config_created` | `bool` | When `true`, asserts that `<output>/Config/` exists. When `false`, asserts it does not exist. Omit to skip this check. |
+| `existing_paths` | `string[]` | Relative paths (from `output`) that must exist after the build. Both files and directories are accepted. |
+| `missing_paths` | `string[]` | Relative paths (from `output`) that must not exist after the build. |
 
 ### alloy-motor-tool-parts
 
