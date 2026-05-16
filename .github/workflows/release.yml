@@ -40,8 +40,15 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-  build:
+  validate:
     needs: verify-tag
+    uses: ./.github/workflows/dotnet-build-test.yml
+    with:
+      checkout-ref: refs/tags/${{ needs.verify-tag.outputs.tag }}
+      fail-fast: true
+
+  build:
+    needs: [verify-tag, validate]
     strategy:
       fail-fast: true
       matrix:
@@ -70,8 +77,6 @@ jobs:
 
       - name: Publish
         shell: bash
-        env:
-          VERSION: ${{ needs.verify-tag.outputs.version }}
         run: |
           dotnet publish src/ModletBuilder.Cli/ModletBuilder.Cli.csproj \
             --configuration Release \
@@ -81,10 +86,10 @@ jobs:
             -p:PublishSingleFile=true \
             -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:DebugType=embedded \
-            -p:Version=$VERSION \
-            -p:AssemblyVersion=$VERSION.0 \
-            -p:FileVersion=$VERSION.0 \
-            -p:InformationalVersion=$VERSION \
+            -p:Version=${{ needs.validate.outputs.nuget-version }} \
+            -p:AssemblyVersion=${{ needs.validate.outputs.assembly-version }} \
+            -p:FileVersion=${{ needs.validate.outputs.file-version }} \
+            -p:InformationalVersion=${{ needs.validate.outputs.informational-version }} \
             -p:IncludeSourceRevisionInInformationalVersion=false \
             -o publish/${{ matrix.rid }}
 
@@ -117,7 +122,7 @@ jobs:
           retention-days: 7
 
   release:
-    needs: [verify-tag, build]
+    needs: [verify-tag, validate, build]
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
