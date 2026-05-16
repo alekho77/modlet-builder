@@ -125,18 +125,123 @@ jobs:
     needs: [verify-tag, validate, build]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ needs.verify-tag.outputs.tag }}
+          fetch-depth: 0
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
 
+      - name: Generate release notes
+        id: notes
+        env:
+          TAG: ${{ needs.verify-tag.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          PREV_TAG=""
+          while IFS= read -r t; do
+            if [ "$t" != "$TAG" ]; then
+              PREV_TAG="$t"
+              break
+            fi
+          done < <(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$')
+          echo "prev_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
+
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="${PREV_TAG}..${TAG}"
+          else
+            RANGE="${TAG}"
+          fi
+
+          breaking=(); features=(); fixes=(); docs_=(); tests=(); buildci=(); maint=(); other=()
+          while IFS=$'\t' read -r sha subject; do
+            entry="- ${subject} (\`${sha}\`)"
+            if echo "$subject" | grep -qiE '\+semver:\s*(breaking|major)|BREAKING[- ]CHANGE'; then
+              breaking+=("$entry")
+            elif echo "$subject" | grep -qiE '\+semver:\s*(feature|minor)|^feat(\([^)]*\))?!?:'; then
+              features+=("$entry")
+            elif echo "$subject" | grep -qiE '\+semver:\s*(fix|patch)|^fix(\([^)]*\))?!?:'; then
+              fixes+=("$entry")
+            elif echo "$subject" | grep -qiE '^docs(\([^)]*\))?!?:'; then
+              docs_+=("$entry")
+            elif echo "$subject" | grep -qiE '^tests?(\([^)]*\))?!?:'; then
+              tests+=("$entry")
+            elif echo "$subject" | grep -qiE '^(ci|build)(\([^)]*\))?!?:'; then
+              buildci+=("$entry")
+            elif echo "$subject" | grep -qiE '^(chore|refactor|style|perf)(\([^)]*\))?!?:'; then
+              maint+=("$entry")
+            else
+              other+=("$entry")
+            fi
+          done < <(git log --format="%h%x09%s" "$RANGE")
+
+          {
+            if [ -n "$PREV_TAG" ]; then
+              echo "## Changes since ${PREV_TAG}"
+            else
+              echo "## Initial Release"
+            fi
+            echo ""
+
+            if [ ${#breaking[@]} -gt 0 ]; then
+              echo "### Breaking Changes"
+              printf '%s\n' "${breaking[@]}"
+              echo ""
+            fi
+            if [ ${#features[@]} -gt 0 ]; then
+              echo "### Features"
+              printf '%s\n' "${features[@]}"
+              echo ""
+            fi
+            if [ ${#fixes[@]} -gt 0 ]; then
+              echo "### Fixes"
+              printf '%s\n' "${fixes[@]}"
+              echo ""
+            fi
+            if [ ${#docs_[@]} -gt 0 ]; then
+              echo "### Documentation"
+              printf '%s\n' "${docs_[@]}"
+              echo ""
+            fi
+            if [ ${#tests[@]} -gt 0 ]; then
+              echo "### Tests"
+              printf '%s\n' "${tests[@]}"
+              echo ""
+            fi
+            if [ ${#buildci[@]} -gt 0 ]; then
+              echo "### Build and CI"
+              printf '%s\n' "${buildci[@]}"
+              echo ""
+            fi
+            if [ ${#maint[@]} -gt 0 ]; then
+              echo "### Maintenance"
+              printf '%s\n' "${maint[@]}"
+              echo ""
+            fi
+            if [ ${#other[@]} -gt 0 ]; then
+              echo "### Other Changes"
+              printf '%s\n' "${other[@]}"
+              echo ""
+            fi
+
+            if [ -n "$PREV_TAG" ]; then
+              echo "**Full Changelog**: https://github.com/${REPO}/compare/${PREV_TAG}...${TAG}"
+            else
+              echo "**Full Changelog**: https://github.com/${REPO}/commits/${TAG}"
+            fi
+          } > release-notes.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.verify-tag.outputs.tag }}
           name: ${{ needs.verify-tag.outputs.tag }}
-          generate_release_notes: true
+          body_path: release-notes.md
           fail_on_unmatched_files: true
           files: artifacts/*
 
@@ -148,5 +253,6 @@ jobs:
             echo "| Field | Value |"
             echo "| --- | --- |"
             echo "| Tag | \`${{ needs.verify-tag.outputs.tag }}\` |"
+            echo "| Previous tag | \`${{ steps.notes.outputs.prev_tag || 'none (initial release)' }}\` |"
             echo "| Platforms | win-x64, linux-x64 |"
           } >> "$GITHUB_STEP_SUMMARY"
