@@ -1,11 +1,6 @@
 <modlet>
 
-  <!-- Localization strings for items defined in this file. -->
-  <localization key="evSampleItem" file="items" type="Item">
-    <english text="Sample Item"/>
-    <russian text="Образцовый предмет"/>
-    <german text="Beispielobjekt"/>
-  </localization>
+  <!-- Description localization entry for the item defined below. -->
   <localization key="evSampleItemDesc" file="items" type="Item"
     context="Item description">
     <english text="A demonstration item for modlet-builder localization support."/>
@@ -21,12 +16,6 @@
       </item>
     </append>
   </fragment>
-
-  <!-- Localization string for the recipe defined below. -->
-  <localization key="evSampleRecipe" file="items" type="Item">
-    <english text="Sample Recipe"/>
-    <russian text="Образцовый рецепт"/>
-  </localization>
 
   <!-- Recipe fragment: depends on the item fragment. Pure XML patch payload. -->
   <fragment name="localization-sample.recipes.base" target="recipes"

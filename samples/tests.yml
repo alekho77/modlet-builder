@@ -185,3 +185,16 @@ tests:
     expected:
       exit_code: 1
       config_created: false
+
+  - id: invalid-orphaned-localization-key
+    name: Orphaned Localization Key Returns Error
+    description: Build a fixture with a localization key not referenced by any DescriptionKey property in any fragment and verify that no Config directory is created.
+    command:
+      verb: build
+      sources:
+        - samples/fixtures/orphaned-localization-key.frag.xml
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 1
+      config_created: false

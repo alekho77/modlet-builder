@@ -263,6 +263,87 @@ public class LocalizationTests : IDisposable
         Assert.Empty(localizationEntries);
     }
 
+    // ── Validator: orphaned localization key detection ────────────────────────
+
+    [Fact]
+    public void Validator_orphan_check_returns_no_errors_when_all_keys_are_referenced()
+    {
+        var entries = new[] { EntryWith("frag.frag.xml", "myItemDesc") };
+        var fragments = new[]
+        {
+            FragWith("frag.frag.xml", "<append xpath=\"/items\"><item name=\"myItem\"><property name=\"DescriptionKey\" value=\"myItemDesc\"/></item></append>"),
+        };
+
+        var diagnostics = LocalizationValidator.ValidateOrphanedLocalizationKeys(entries, fragments);
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Validator_orphan_check_returns_error_for_key_not_in_any_description_key()
+    {
+        var entries = new[] { EntryWith("frag.frag.xml", "orphanKey") };
+        var fragments = new[]
+        {
+            FragWith("frag.frag.xml", "<append xpath=\"/items\"><item name=\"myItem\"/></append>"),
+        };
+
+        var diagnostics = LocalizationValidator.ValidateOrphanedLocalizationKeys(entries, fragments);
+
+        Assert.Single(diagnostics);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostics[0].Severity);
+        Assert.Contains("orphanKey", diagnostics[0].Message);
+        Assert.Contains("DescriptionKey", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Validator_orphan_check_returns_no_errors_for_empty_entry_list()
+    {
+        var fragments = new[]
+        {
+            FragWith("frag.frag.xml", "<append xpath=\"/items\"/>"),
+        };
+
+        var diagnostics = LocalizationValidator.ValidateOrphanedLocalizationKeys([], fragments);
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Validator_orphan_check_reports_each_orphaned_entry_separately()
+    {
+        var entries = new[]
+        {
+            EntryWith("frag.frag.xml", "orphanA"),
+            EntryWith("frag.frag.xml", "validDesc"),
+            EntryWith("frag.frag.xml", "orphanB"),
+        };
+        var fragments = new[]
+        {
+            FragWith("frag.frag.xml", "<append><item name=\"x\"><property name=\"DescriptionKey\" value=\"validDesc\"/></item></append>"),
+        };
+
+        var diagnostics = LocalizationValidator.ValidateOrphanedLocalizationKeys(entries, fragments);
+
+        Assert.Equal(2, diagnostics.Count);
+        Assert.Contains(diagnostics, d => d.Message.Contains("orphanA"));
+        Assert.Contains(diagnostics, d => d.Message.Contains("orphanB"));
+    }
+
+    [Fact]
+    public void Validator_orphan_check_scans_nested_elements_in_fragment_body()
+    {
+        var entries = new[] { EntryWith("frag.frag.xml", "deepDesc") };
+        var fragments = new[]
+        {
+            FragWith("frag.frag.xml", "<append xpath=\"/items\"><item name=\"x\"><properties><property name=\"DescriptionKey\" value=\"deepDesc\"/></properties></item></append>"),
+        };
+
+        var diagnostics = LocalizationValidator.ValidateOrphanedLocalizationKeys(entries, fragments);
+
+        Assert.Empty(diagnostics);
+    }
+
     // ── Validator: duplicate key detection ────────────────────────────────────
 
     [Fact]
@@ -492,4 +573,13 @@ public class LocalizationTests : IDisposable
             Schinese: string.Empty,
             Tchinese: string.Empty,
             SourceFile: sourceFile);
+
+    private static Fragment FragWith(string sourceFile, string bodyXml) =>
+        new(
+            InternalId: $"id:{sourceFile}",
+            Name: null,
+            Target: "items",
+            Requires: [],
+            SourceFile: sourceFile,
+            Body: [XElement.Parse(bodyXml)]);
 }
