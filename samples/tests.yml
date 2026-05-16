@@ -170,8 +170,7 @@ tests:
         content: "stale content"
     expected:
       exit_code: 0
-      existing_paths:
-        - Config/Localization.txt
+      expected_result_path: samples/golden/localization-sample/expected
 
   - id: localization-duplicate-key-error
     name: Duplicate Localization Key Returns Error
