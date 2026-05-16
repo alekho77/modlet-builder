@@ -324,7 +324,7 @@ public class FragmentParserTests : IDisposable
     // ── unknown attribute diagnostics ──────────────────────────────────────────
 
     [Fact]
-    public void Fragment_with_hint_attribute_produces_error()
+    public void Fragment_with_hint_attribute_produces_warning()
     {
         var file = Write(@"
 <modlet>
@@ -333,9 +333,10 @@ public class FragmentParserTests : IDisposable
 
         var (fragments, diagnostics) = FragmentParser.Parse(file);
 
-        Assert.Empty(fragments);
+        Assert.Single(fragments);
+        Assert.Equal("mymod.items", fragments[0].Name);
         Assert.Contains(diagnostics, d =>
-            d.Severity == DiagnosticSeverity.Error && d.Message.Contains("hint"));
+            d.Severity == DiagnosticSeverity.Warning && d.Message.Contains("hint"));
     }
 
     [Fact]
@@ -353,15 +354,15 @@ public class FragmentParserTests : IDisposable
     }
 
     [Fact]
-    public void Unknown_attribute_on_fragment_produces_error()
+    public void Unknown_attribute_on_fragment_produces_warning()
     {
         var file = Write(@"<modlet><fragment name=""mymod.items"" target=""items"" unknown=""value""><append/></fragment></modlet>");
 
         var (fragments, diagnostics) = FragmentParser.Parse(file);
 
-        Assert.Empty(fragments);
+        Assert.Single(fragments);
         Assert.Contains(diagnostics, d =>
-            d.Severity == DiagnosticSeverity.Error && d.Message.Contains("unknown"));
+            d.Severity == DiagnosticSeverity.Warning && d.Message.Contains("unknown"));
     }
 
         [Fact]
@@ -371,9 +372,9 @@ public class FragmentParserTests : IDisposable
 
           var (fragments, diagnostics) = FragmentParser.Parse(file);
 
-          Assert.Empty(fragments);
+          Assert.Single(fragments);
           Assert.Contains(diagnostics, d =>
-            d.Severity == DiagnosticSeverity.Error
+            d.Severity == DiagnosticSeverity.Warning
             && d.Message.Contains("unknown")
             && d.Message.Contains("unnamed fragment")
             && d.Message.Contains(file));
@@ -382,15 +383,16 @@ public class FragmentParserTests : IDisposable
     // ── Additional validation edge cases ─────────────────────────────────────
 
     [Fact]
-    public void Multiple_unknown_attrs_on_fragment_produce_one_error_per_attr()
+    public void Multiple_unknown_attrs_on_fragment_produce_one_warning_per_attr()
     {
         var file = Write(@"<modlet><fragment name=""mymod.items"" target=""items"" unknown1=""a"" unknown2=""b""><append/></fragment></modlet>");
 
-        var (_, diagnostics) = FragmentParser.Parse(file);
+        var (fragments, diagnostics) = FragmentParser.Parse(file);
 
-        // Each unknown attribute must produce its own Error diagnostic.
+        // Each unknown attribute must produce its own Warning diagnostic.
+        Assert.Single(fragments);
         Assert.Equal(2, diagnostics.Count(d =>
-            d.Severity == DiagnosticSeverity.Error
+            d.Severity == DiagnosticSeverity.Warning
             && (d.Message.Contains("unknown1") || d.Message.Contains("unknown2"))));
     }
 

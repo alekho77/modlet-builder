@@ -118,7 +118,7 @@ internal static class FragmentParser
             target = null;
         }
 
-        // Validate that no unknown attributes are present.
+        // Warn about unknown attributes but still parse the fragment.
         var knownAttribs = new HashSet<string>(StringComparer.Ordinal) { "name", "target", "requires" };
         foreach (var attr in el.Attributes())
         {
@@ -126,14 +126,14 @@ internal static class FragmentParser
             {
                 var fragLabel = DescribeFragment(name, CreateInternalId(el, filePath, fragmentOrdinal));
                 diagnostics.Add(new Diagnostic(
-                    DiagnosticSeverity.Error,
+                    DiagnosticSeverity.Warning,
                     $"Unknown attribute '{attr.Name.LocalName}' on fragment {fragLabel}. " +
                     "Allowed attributes are: name, target, requires.",
                     filePath));
             }
         }
 
-        if (diagnostics.Count > 0)
+        if (diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
             return (null, diagnostics);
 
         var requiresAttr = el.Attribute("requires")?.Value ?? string.Empty;

@@ -135,17 +135,18 @@ ordering within a single output target (`loot.xml`).
 
 ## Invalid samples
 
-Each file in `samples/invalid/` demonstrates one specific build error. They are
-used by `CommandLineIntegrationTests` to verify that the tool correctly rejects
-invalid input and exits with code 1.
+Files in `samples/invalid/` demonstrate invalid or legacy source metadata. They
+are used by `CommandLineIntegrationTests` to verify that the tool either rejects
+invalid input with exit code 1 or reports warning-only legacy metadata without
+failing the build.
 
-| File | Error demonstrated |
-| ---- | ------------------ |
+| File | Behavior demonstrated |
+| ---- | --------------------- |
 | `missing-dependency.frag.xml` | `requires` references a fragment that does not exist |
 | `duplicate-names.frag.xml` | two fragments share the same `name` |
 | `cycle.frag.xml` | two fragments form a circular `requires` dependency |
 | `unknown-target.frag.xml` | `target` value is not in the known target list |
-| `hint-attribute.frag.xml` | unsupported `hint` attribute triggers a parse error |
+| `hint-attribute.frag.xml` | unsupported `hint` attribute triggers a warning, but the build still succeeds |
 | `malformed.frag.xml` | XML is not well-formed |
 
 ## Keeping expected output in sync

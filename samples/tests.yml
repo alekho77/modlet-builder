@@ -112,8 +112,8 @@ tests:
       config_created: false
 
   - id: invalid-hint-attribute
-    name: Hint Attribute Returns Error
-    description: Build the invalid hint-attribute fixture and verify that no Config directory is created.
+    name: Hint Attribute Produces Warning
+    description: Build the hint-attribute fixture and verify that the build succeeds with a warning and output is generated.
     command:
       verb: build
       sources:
@@ -121,8 +121,8 @@ tests:
       output: "{tempOut}"
       verbosity: none
     expected:
-      exit_code: 1
-      config_created: false
+      exit_code: 0
+      config_created: true
 
   - id: invalid-malformed-xml
     name: Malformed XML Returns Error
