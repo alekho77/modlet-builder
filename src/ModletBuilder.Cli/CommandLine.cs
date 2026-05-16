@@ -14,7 +14,7 @@ internal static class CommandLine
         if (args.Length == 0)
         {
             PrintAbout(Console.Out);
-            return 0;
+            return ExitCodes.Success;
         }
 
         var command = args[0];
@@ -24,11 +24,11 @@ internal static class CommandLine
             case "-h":
             case "--help":
                 PrintHelp(Console.Out);
-                return 0;
+                return ExitCodes.Success;
 
             case "--version":
                 Console.WriteLine(GetVersion());
-                return 0;
+                return ExitCodes.Success;
 
             case "build":
                 return RunBuild(args[1..]);
@@ -37,7 +37,7 @@ internal static class CommandLine
                 Console.Error.WriteLine($"Unknown command: {command}");
                 Console.Error.WriteLine();
                 PrintHelp(Console.Error);
-                return 64;
+                return ExitCodes.UsageError;
         }
     }
 
@@ -52,7 +52,7 @@ internal static class CommandLine
             Console.Error.WriteLine(
                 "Usage: modlet-builder build --src <path> [<path> ...] --out <mod-dir> " +
                 "[--recursive] [--dry-run] [--clean] [--verbosity <level>]");
-            return 64;
+            return ExitCodes.UsageError;
         }
 
         var logger = new BuildLogger(options.Verbosity, Console.Out, Console.Error);
@@ -77,13 +77,13 @@ internal static class CommandLine
         if (HasErrors(allDiagnostics))
         {
             EmitDiagnostics(allDiagnostics, logger);
-            return 1;
+            return ExitCodes.BuildError;
         }
 
         if (fragments.Count == 0)
         {
             Console.Error.WriteLine("error: No fragments found in the specified source paths.");
-            return 1;
+            return ExitCodes.BuildError;
         }
 
         // ── Stage 1: Dependency resolution ────────────────────────────────────
@@ -93,7 +93,7 @@ internal static class CommandLine
         if (HasErrors(allDiagnostics))
         {
             EmitDiagnostics(allDiagnostics, logger);
-            return 1;
+            return ExitCodes.BuildError;
         }
 
         logger.Debug($"Resolved order for {ordered.Count} fragment(s).");
@@ -106,14 +106,14 @@ internal static class CommandLine
         EmitDiagnostics(allDiagnostics, logger);
 
         if (HasErrors(allDiagnostics))
-            return 1;
+            return ExitCodes.BuildError;
 
         if (options.DryRun)
             logger.Information("Dry run completed. No files were written.");
         else
             logger.Information($"Build complete. Output written to '{options.OutputDir}'.");
 
-        return 0;
+        return ExitCodes.Success;
     }
 
     private static bool HasErrors(IEnumerable<Diagnostic> diagnostics) =>
