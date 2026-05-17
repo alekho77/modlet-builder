@@ -210,4 +210,48 @@ public class BuildArgumentParserTests
         Assert.NotNull(options);
         Assert.Equal("second_out", options.OutputDir);
     }
+
+    [Fact]
+    public void Project_arg_without_src_or_out_parses_successfully()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(["--proj", "mod.proj.yml"]);
+
+        Assert.Empty(errors);
+        Assert.NotNull(options);
+        Assert.Equal("mod.proj.yml", options.ProjectFile);
+        Assert.Empty(options.Sources);
+        Assert.Null(options.OutputDir);
+    }
+
+    [Fact]
+    public void Project_arg_with_out_parses_output_override()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(["--proj", "mod.proj.yml", "--out", "dist"]);
+
+        Assert.Empty(errors);
+        Assert.NotNull(options);
+        Assert.Equal("mod.proj.yml", options.ProjectFile);
+        Assert.Equal("dist", options.OutputDir);
+    }
+
+    [Fact]
+    public void Project_arg_with_src_collects_cli_sources()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(
+            ["--proj", "mod.proj.yml", "--src", "extra.frag.xml", "shared", "--recursive"]);
+
+        Assert.Empty(errors);
+        Assert.NotNull(options);
+        Assert.Equal(["extra.frag.xml", "shared"], options.Sources);
+        Assert.True(options.Recursive);
+    }
+
+    [Fact]
+    public void Project_without_value_returns_error()
+    {
+        var (options, errors) = BuildCommand.ParseArgs(["--proj"]);
+
+        Assert.Null(options);
+        Assert.Contains(errors, e => e.Contains("--proj"));
+    }
 }

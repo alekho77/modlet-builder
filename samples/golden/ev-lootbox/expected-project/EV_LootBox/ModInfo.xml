@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ModInfo>
+  <Name value="EV_LootBox" />
+  <DisplayName value="Loot Box" />
+  <Description value="Adds a loot box with Simple, Good, and Valuable reward categories." />
+  <Author value="Aleksei Khozin" />
+  <Version value="0.1.0" />
+  <Website value="https://github.com/alekho77/epic_7d2d_mods" />
+</ModInfo>

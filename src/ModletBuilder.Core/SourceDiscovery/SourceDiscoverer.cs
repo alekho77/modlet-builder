@@ -9,18 +9,19 @@ internal static class SourceDiscoverer
 
     internal static (IReadOnlyList<string> Files, IReadOnlyList<Diagnostic> Diagnostics) Discover(
         string[] paths,
-        bool recursive)
+        bool recursive) =>
+        Discover(paths.Select(path => new SourceSpec(path, recursive)).ToArray());
+
+    internal static (IReadOnlyList<string> Files, IReadOnlyList<Diagnostic> Diagnostics) Discover(
+        IReadOnlyList<SourceSpec> sources)
     {
         var diagnostics = new List<Diagnostic>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var files = new List<string>();
 
-        var searchOption = recursive
-            ? SearchOption.AllDirectories
-            : SearchOption.TopDirectoryOnly;
-
-        foreach (var path in paths)
+        foreach (var source in sources)
         {
+            var path = source.Path;
             if (File.Exists(path))
             {
                 if (!path.EndsWith(FragmentExtension, StringComparison.OrdinalIgnoreCase))
@@ -38,6 +39,10 @@ internal static class SourceDiscoverer
             }
             else if (Directory.Exists(path))
             {
+                var searchOption = source.Recursive
+                    ? SearchOption.AllDirectories
+                    : SearchOption.TopDirectoryOnly;
+
                 var found = Directory.EnumerateFiles(path, FragmentPattern, searchOption);
                 foreach (var f in found)
                 {

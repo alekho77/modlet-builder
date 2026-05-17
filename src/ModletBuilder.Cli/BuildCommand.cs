@@ -9,6 +9,7 @@ internal static class BuildCommand
         var errors = new List<string>();
         var sources = new List<string>();
         string? outputDir = null;
+        string? projectFile = null;
         bool recursive = false;
         bool dryRun = false;
         bool clean = false;
@@ -46,6 +47,17 @@ internal static class BuildCommand
                     i++;
                     continue;
 
+                case "--proj":
+                    i++;
+                    if (i >= args.Length || args[i].StartsWith("--", StringComparison.Ordinal))
+                    {
+                        errors.Add("Option '--proj' requires a project YAML file path argument.");
+                        break;
+                    }
+                    projectFile = args[i];
+                    i++;
+                    continue;
+
                 case "--recursive":
                     recursive = true;
                     i++;
@@ -80,10 +92,12 @@ internal static class BuildCommand
             }
         }
 
-        if (sources.Count == 0)
+        var projectMode = !string.IsNullOrWhiteSpace(projectFile);
+
+        if (!projectMode && sources.Count == 0)
             errors.Add("Option '--src' is required and must specify at least one source path.");
 
-        if (outputDir is null)
+        if (!projectMode && outputDir is null)
             errors.Add("Option '--out' is required.");
 
         if (errors.Count > 0)
@@ -95,7 +109,8 @@ internal static class BuildCommand
             recursive,
             dryRun,
             clean,
-            verbosity), errors);
+            verbosity,
+            projectFile), errors);
     }
 
     private static bool TryParseVerbosity(string value, out VerbosityLevel level)

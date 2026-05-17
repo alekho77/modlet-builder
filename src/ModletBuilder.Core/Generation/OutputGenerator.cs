@@ -15,6 +15,16 @@ internal static class OutputGenerator
         string outDir,
         bool dryRun,
         bool clean,
+        BuildLogger logger) =>
+        Generate(fragments, localizationEntries, modInfo: null, outDir, dryRun, clean, logger);
+
+    internal static IReadOnlyList<Diagnostic> Generate(
+        IReadOnlyList<Fragment> fragments,
+        IReadOnlyList<LocalizationEntry> localizationEntries,
+        ModInfo? modInfo,
+        string outDir,
+        bool dryRun,
+        bool clean,
         BuildLogger logger)
     {
         var diagnostics = new List<Diagnostic>();
@@ -23,7 +33,7 @@ internal static class OutputGenerator
 
         if (dryRun)
         {
-            ReportDryRun(fragments, localizationEntries, outDir, clean, logger);
+            ReportDryRun(fragments, localizationEntries, modInfo, outDir, clean, logger);
             return diagnostics;
         }
 
@@ -63,6 +73,9 @@ internal static class OutputGenerator
         var localizationDiagnostics = LocalizationGenerator.Generate(localizationEntries, outDir, dryRun: false, logger);
         diagnostics.AddRange(localizationDiagnostics);
 
+        var modInfoDiagnostics = ModInfoGenerator.Generate(modInfo, outDir, dryRun: false, logger);
+        diagnostics.AddRange(modInfoDiagnostics);
+
         return diagnostics;
     }
 
@@ -71,6 +84,7 @@ internal static class OutputGenerator
     private static void ReportDryRun(
         IReadOnlyList<Fragment> fragments,
         IReadOnlyList<LocalizationEntry> localizationEntries,
+        ModInfo? modInfo,
         string outDir,
         bool clean,
         BuildLogger logger)
@@ -98,6 +112,7 @@ internal static class OutputGenerator
             string.Join(", ", configFiles.Select(f => $"Config/{f}")) + ".");
 
         LocalizationGenerator.Generate(localizationEntries, outDir, dryRun: true, logger);
+        ModInfoGenerator.Generate(modInfo, outDir, dryRun: true, logger);
     }
 
     // ── Real output ───────────────────────────────────────────────────────────

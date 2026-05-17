@@ -46,7 +46,7 @@ Instead of managing dozens of separate modlets with unpredictable load order, yo
 
 **What goes in:** one or more `*.frag.xml` source fragment files, or directories containing them.
 
-**What comes out:** generated XML files inside `{mod-dir}/Config/`, ready to drop into your game's `Mods/` folder.
+**What comes out:** generated XML files inside `{mod-dir}/Config/`, ready to drop into your game's `Mods/` folder. Project builds also generate `{mod-dir}/ModInfo.xml`.
 
 ```bash
 modlet-builder build --src path/to/my-fragments --out path/to/Mods/MyMod --recursive
@@ -62,6 +62,12 @@ path/to/Mods/MyMod/
 ```
 
 Drop the `MyMod/` directory into your game's `Mods/` folder and you're done.
+
+For a complete mod build with `ModInfo.xml`, use a project YAML file:
+
+```bash
+modlet-builder build --proj path/to/mod.proj.yml
+```
 
 To build the same source fragments into two different mods, run `build` twice with different `--out` values:
 
@@ -196,24 +202,55 @@ Fragments that are not referenced by `requires` should omit `name`. The tool sti
 
 When a directory is passed as a source, the tool scans it for `*.frag.xml` files. Use `--recursive` to include subdirectories. Explicit file paths and directory paths can be mixed freely in the same command. All discovered files are deduplicated and sorted deterministically before processing.
 
+Project YAML sources can set `recursive` per source entry, so one source directory can be recursive while another remains top-level only.
+
 ## `build` Command
 
 Assembles source fragments into final game-ready XML files.
 
 ```text
 modlet-builder build --src <path> [<path> ...] --out <mod-dir> [--recursive] [--dry-run] [--clean] [--verbosity <level>]
+modlet-builder build --proj <file.yml> [--src <path> ...] [--out <output-root>] [--recursive] [--dry-run] [--clean] [--verbosity <level>]
 ```
 
 ### Options
 
 | Option | Required | Description |
 | ------ | -------- | ----------- |
-| `--src <path> [<path> ...]` | Yes | One or more source paths. Each path can be an explicit `*.frag.xml` file or a directory. Paths are space-separated and may be mixed freely. |
-| `--out <mod-dir>` | Yes | Output mod directory. Config files are written to `{mod-dir}/Config/`. Required even with `--dry-run`. |
-| `--recursive` | No | When a directory is given in `--src`, scan its subdirectories recursively for `*.frag.xml` files. |
+| `--src <path> [<path> ...]` | Source mode: yes. Project mode: optional. | One or more source paths. In project mode these are appended to project `sources`. |
+| `--proj <file.yml>` | Source mode: no. Project mode: yes. | Project YAML file with mod metadata, output root, mod folder name, and source entries. |
+| `--out <path>` | Source mode: yes. Project mode: no. | In source mode, output mod directory. In project mode, overrides the YAML output root and final output becomes `{--out}/{modFolder}`. |
+| `--recursive` | No | When a directory is given through CLI `--src`, scan its subdirectories recursively. Project YAML sources use their own per-entry `recursive` value. |
 | `--dry-run` | No | Validate all source fragments, resolve dependencies, and report what would be written — without touching the filesystem at all. No directories are created or deleted. |
-| `--clean` | No | Delete the entire `--out` directory before writing output. Ignored when combined with `--dry-run`. |
+| `--clean` | No | Delete the final mod output directory before writing output. In project mode this is `{outputRoot}/{modFolder}`, not the higher-level output root. Ignored when combined with `--dry-run`. |
 | `--verbosity <level>` | No | Controls how much is logged. One of: `debug`, `information` (default), `warning`, `error`, `none`. |
+
+### Project file format
+
+Project files are YAML. They describe mod-specific metadata and the source set for one concrete mod:
+
+```yaml
+modFolder: EV_LootBox
+output: dist
+
+modInfo:
+  name: EV_LootBox
+  displayName: Loot Box
+  description: Adds a loot box with Simple, Good, and Valuable reward categories.
+  author: Aleksei Khozin
+  version: 0.1.0
+  website: https://github.com/alekho77/epic_7d2d_mods
+
+sources:
+  - path: src
+    recursive: true
+  - path: shared/common.frag.xml
+  - shared/non-recursive-dir
+```
+
+Project paths are resolved relative to the project file. `modFolder`, `output`, all six `modInfo` fields, and at least one `sources` entry are required. String source entries default to `recursive: false`.
+
+Running `modlet-builder build --proj mod.proj.yml` writes to `{output}/{modFolder}`. Passing `--out` in project mode overrides only the output root, so `--out build-output` writes to `build-output/{modFolder}`.
 
 ### Example
 
@@ -327,8 +364,8 @@ The `target` attribute in a fragment file must be one of the values below. Each 
 
 Known limitations for this phase:
 
-- No `ModInfo.xml` generation.
-- Only `*.frag.xml` source format is supported.
+- Raw `--src` builds do not generate `ModInfo.xml`; use `--proj` for complete mod folder output.
+- Source fragments still use the `*.frag.xml` format.
 - `target` values not in the table above are hard errors; no custom target extensibility yet.
 
 **Breaking change:** the `--out` option expects a **single mod directory**. Config files are written to `{mod-dir}/Config/`. To build the same sources into two different mods, run `build` twice with different `--out` values. The `hint` attribute on `<modlet>` and `<fragment>` elements and the `--targets` option are no longer supported and will produce errors.

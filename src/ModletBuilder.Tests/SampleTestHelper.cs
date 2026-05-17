@@ -212,13 +212,26 @@ internal static class SampleTestHelper
         SampleBuildCommand command,
         SampleExecutionContext context)
     {
-        var args = new List<string> { command.Verb, "--src" };
+        var args = new List<string> { command.Verb };
 
-        foreach (var source in command.Sources)
-            args.Add(ResolvePathToken(source, context));
+        if (!string.IsNullOrWhiteSpace(command.Project))
+        {
+            args.Add("--proj");
+            args.Add(ResolvePathToken(command.Project, context));
+        }
 
-        args.Add("--out");
-        args.Add(ResolvePathToken(command.Output, context));
+        if (command.Sources.Count > 0)
+        {
+            args.Add("--src");
+            foreach (var source in command.Sources)
+                args.Add(ResolvePathToken(source, context));
+        }
+
+        if (!string.IsNullOrWhiteSpace(command.Output))
+        {
+            args.Add("--out");
+            args.Add(ResolvePathToken(command.Output, context));
+        }
 
         if (command.Recursive)
             args.Add("--recursive");
@@ -311,6 +324,8 @@ public sealed class SampleTestCase
 public sealed class SampleBuildCommand
 {
     public string Verb { get; set; } = "build";
+
+    public string? Project { get; set; }
 
     public List<string> Sources { get; set; } = [];
 

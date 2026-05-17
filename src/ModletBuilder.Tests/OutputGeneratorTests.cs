@@ -72,6 +72,93 @@ public class OutputGeneratorTests : IDisposable
     }
 
     [Fact]
+    public void Generates_modinfo_file_with_expected_structure()
+    {
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            [],
+            SampleModInfo(),
+            _tempDir,
+            dryRun: false,
+            clean: false,
+            _nullLogger);
+
+        var outputFile = Path.Combine(_tempDir, "ModInfo.xml");
+        Assert.True(File.Exists(outputFile));
+
+        var doc = XDocument.Load(outputFile);
+        Assert.Equal("ModInfo", doc.Root!.Name.LocalName);
+        Assert.Equal(
+            ["Name", "DisplayName", "Description", "Author", "Version", "Website"],
+            doc.Root.Elements().Select(e => e.Name.LocalName).ToArray());
+        Assert.Equal("EV_LootBox", doc.Root.Element("Name")?.Attribute("value")?.Value);
+        Assert.Equal("Loot Box", doc.Root.Element("DisplayName")?.Attribute("value")?.Value);
+    }
+
+    [Fact]
+    public void Modinfo_file_starts_with_xml_declaration_with_uppercase_encoding()
+    {
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            [],
+            SampleModInfo(),
+            _tempDir,
+            dryRun: false,
+            clean: false,
+            _nullLogger);
+
+        var rawBytes = File.ReadAllBytes(Path.Combine(_tempDir, "ModInfo.xml"));
+        var firstLine = Encoding.UTF8.GetString(rawBytes, 0, Math.Min(rawBytes.Length, 60));
+
+        Assert.Contains("encoding=\"UTF-8\"", firstLine);
+    }
+
+    [Fact]
+    public void Modinfo_file_has_no_byte_order_mark()
+    {
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            [],
+            SampleModInfo(),
+            _tempDir,
+            dryRun: false,
+            clean: false,
+            _nullLogger);
+
+        var rawBytes = File.ReadAllBytes(Path.Combine(_tempDir, "ModInfo.xml"));
+
+        Assert.False(rawBytes.Length >= 3
+            && rawBytes[0] == 0xEF && rawBytes[1] == 0xBB && rawBytes[2] == 0xBF,
+            "ModInfo.xml must not start with a UTF-8 BOM.");
+    }
+
+    [Fact]
+    public void Modinfo_values_are_xml_escaped()
+    {
+        var modInfo = SampleModInfo() with
+        {
+            DisplayName = "Loot & \"Box\"",
+            Description = "Adds <rare> loot.",
+        };
+
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            [],
+            modInfo,
+            _tempDir,
+            dryRun: false,
+            clean: false,
+            _nullLogger);
+
+        var raw = File.ReadAllText(Path.Combine(_tempDir, "ModInfo.xml"));
+        Assert.Contains("Loot &amp; &quot;Box&quot;", raw, StringComparison.Ordinal);
+        Assert.Contains("Adds &lt;rare&gt; loot.", raw, StringComparison.Ordinal);
+
+        var doc = XDocument.Load(Path.Combine(_tempDir, "ModInfo.xml"));
+        Assert.Equal("Loot & \"Box\"", doc.Root!.Element("DisplayName")?.Attribute("value")?.Value);
+    }
+
+    [Fact]
     public void Fragments_for_same_target_are_merged_in_order()
     {
         OutputGenerator.Generate(
@@ -115,6 +202,21 @@ public class OutputGeneratorTests : IDisposable
             [], _tempDir, dryRun: true, clean: false, _nullLogger);
 
         Assert.False(Directory.Exists(Path.Combine(_tempDir, "Config")));
+    }
+
+    [Fact]
+    public void Dry_run_does_not_write_modinfo()
+    {
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            [],
+            SampleModInfo(),
+            _tempDir,
+            dryRun: true,
+            clean: false,
+            _nullLogger);
+
+        Assert.False(File.Exists(Path.Combine(_tempDir, "ModInfo.xml")));
     }
 
     [Fact]
@@ -243,5 +345,13 @@ public class OutputGeneratorTests : IDisposable
 
     private static Fragment Frag(string? name, string target, string bodyXml, string internalId) =>
         new(internalId, name, target, [], $"{name ?? internalId}.frag.xml", [XElement.Parse(bodyXml)]);
+
+    private static ModInfo SampleModInfo() => new(
+        Name: "EV_LootBox",
+        DisplayName: "Loot Box",
+        Description: "Adds a loot box with Simple, Good, and Valuable reward categories.",
+        Author: "Aleksei Khozin",
+        Version: "0.1.0",
+        Website: "https://github.com/alekho77/epic_7d2d_mods");
 }
 
