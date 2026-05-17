@@ -70,8 +70,8 @@ sources:
     public void Missing_required_top_level_field_returns_error(string field)
     {
         var yaml = field == "sources"
-            ? ValidYaml().Split("sources:", StringSplitOptions.None)[0]
-            : ValidYaml().Replace($"{field}: {ValueFor(field)}\n", string.Empty, StringComparison.Ordinal);
+            ? RemoveSourcesBlock(ValidYaml())
+            : RemoveLineStartingWith(ValidYaml(), $"{field}: ");
         var projectFile = WriteProject(yaml);
 
         var (project, diagnostics) = ProjectFileLoader.Load(projectFile);
@@ -89,7 +89,7 @@ sources:
     [InlineData("website")]
     public void Missing_required_modinfo_field_returns_error(string field)
     {
-        var yaml = ValidYaml().Replace($"  {field}: {ValueFor(field)}\n", string.Empty, StringComparison.Ordinal);
+        var yaml = RemoveLineStartingWith(ValidYaml(), $"  {field}: ");
         var projectFile = WriteProject(yaml);
 
         var (project, diagnostics) = ProjectFileLoader.Load(projectFile);
@@ -113,9 +113,22 @@ sources:
     private string WriteProject(string yaml)
     {
         var path = Path.Combine(_tempDir, "mod.proj.yml");
-        File.WriteAllText(path, yaml.Replace("\r\n", "\n"));
+        File.WriteAllText(path, NormalizeYaml(yaml));
         return path;
     }
+
+    private static string RemoveSourcesBlock(string yaml) =>
+        NormalizeYaml(yaml).Split("sources:", StringSplitOptions.None)[0];
+
+    private static string RemoveLineStartingWith(string yaml, string prefix) =>
+        string.Join(
+            "\n",
+            NormalizeYaml(yaml)
+                .Split('\n')
+                .Where(line => !line.StartsWith(prefix, StringComparison.Ordinal)));
+
+    private static string NormalizeYaml(string yaml) =>
+        yaml.Replace("\r\n", "\n").Replace("\r", "\n");
 
     private static string ValidYaml() => """
 modFolder: EV_LootBox
@@ -132,17 +145,4 @@ sources:
     recursive: true
 """;
 
-    private static string ValueFor(string field) => field switch
-    {
-        "modFolder" => "EV_LootBox",
-        "output" => "dist",
-        "sources" => string.Empty,
-        "name" => "EV_LootBox",
-        "displayName" => "Loot Box",
-        "description" => "Adds a loot box.",
-        "author" => "Aleksei Khozin",
-        "version" => "0.1.0",
-        "website" => "https://github.com/alekho77/epic_7d2d_mods",
-        _ => throw new ArgumentOutOfRangeException(nameof(field), field, null),
-    };
 }
