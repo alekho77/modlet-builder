@@ -171,6 +171,9 @@ dotnet publish src/ModletBuilder.Cli -c Release -r win-x64 -p:PublishAot=true
 
 Published output lands at `build/bin/ModletBuilder.Cli/Release/net10.0/<runtime>/publish/`.
 
+For GitHub Release creation, version bumping, and changelog rules, see
+[docs/release-process.md](docs/release-process.md).
+
 ## Project Structure
 
 ```text
