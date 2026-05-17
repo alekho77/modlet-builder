@@ -1,4 +1,5 @@
 using ModletBuilder.Cli;
+using ModletBuilder.Core.Generation;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -29,7 +30,9 @@ internal static class SampleTestHelper
     /// Runs <see cref="CommandLine.Run"/> and captures stdout and stderr,
     /// returning the exit code together with the captured output.
     /// </summary>
-    internal static (int ExitCode, string Stdout, string Stderr) RunBuildCapturing(string[] args)
+    internal static (int ExitCode, string Stdout, string Stderr) RunBuildCapturing(
+        string[] args,
+        IMarkdownToBbCodeConverter? markdownConverter = null)
     {
         var prevOut = Console.Out;
         var prevErr = Console.Error;
@@ -39,7 +42,7 @@ internal static class SampleTestHelper
         Console.SetError(stderrCapture);
         try
         {
-            var exitCode = CommandLine.Run(args);
+            var exitCode = CommandLine.Run(args, markdownConverter ?? new TestMarkdownToBbCodeConverter());
             return (exitCode, stdoutCapture.ToString(), stderrCapture.ToString());
         }
         finally

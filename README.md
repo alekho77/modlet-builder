@@ -46,7 +46,7 @@ Instead of managing dozens of separate modlets with unpredictable load order, yo
 
 **What goes in:** one or more `*.frag.xml` source fragment files, or directories containing them.
 
-**What comes out:** generated XML files inside `{mod-dir}/Config/`, ready to drop into your game's `Mods/` folder. Project builds also generate `{mod-dir}/ModInfo.xml`.
+**What comes out:** generated XML files inside `{mod-dir}/Config/`, ready to drop into your game's `Mods/` folder. Project builds also generate `{mod-dir}/ModInfo.xml` and, when configured, README/Nexus description files.
 
 ```bash
 modlet-builder build --src path/to/my-fragments --out path/to/Mods/MyMod --recursive
@@ -63,7 +63,7 @@ path/to/Mods/MyMod/
 
 Drop the `MyMod/` directory into your game's `Mods/` folder and you're done.
 
-For a complete mod build with `ModInfo.xml`, use a project YAML file:
+For a complete mod build with `ModInfo.xml` and optional README/Nexus description output, use a project YAML file:
 
 ```bash
 modlet-builder build --proj path/to/mod.proj.yml
@@ -232,6 +232,7 @@ Project files are YAML. They describe mod-specific metadata and the source set f
 ```yaml
 modFolder: EV_LootBox
 output: dist
+readme: docs/lootbox.md
 
 modInfo:
   name: EV_LootBox
@@ -249,6 +250,8 @@ sources:
 ```
 
 Project paths are resolved relative to the project file. `modFolder`, `output`, all six `modInfo` fields, and at least one `sources` entry are required. String source entries default to `recursive: false`.
+
+The optional `readme` field points to a Markdown file for the concrete mod. When present, project builds copy it to `{output}/{modFolder}/README.md` and generate `{output}/{modFolder}/NEXUS_DESCRIPTION.bbcode` from it using `Converter.MarkdownToBBCodeNM.Tool@1.0.0.17` via `dotnet tool exec`.
 
 Running `modlet-builder build --proj mod.proj.yml` writes to `{output}/{modFolder}`. Passing `--out` in project mode overrides only the output root, so `--out build-output` writes to `build-output/{modFolder}`.
 
@@ -364,7 +367,7 @@ The `target` attribute in a fragment file must be one of the values below. Each 
 
 Known limitations for this phase:
 
-- Raw `--src` builds do not generate `ModInfo.xml`; use `--proj` for complete mod folder output.
+- Raw `--src` builds do not generate `ModInfo.xml`, `README.md`, or `NEXUS_DESCRIPTION.bbcode`; use `--proj` for complete mod folder output.
 - Source fragments still use the `*.frag.xml` format.
 - `target` values not in the table above are hard errors; no custom target extensibility yet.
 

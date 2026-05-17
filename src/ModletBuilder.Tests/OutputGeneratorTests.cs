@@ -9,12 +9,15 @@ namespace ModletBuilder.Tests;
 public class OutputGeneratorTests : IDisposable
 {
     private readonly string _tempDir;
+    private readonly string _sourceDir;
     private readonly BuildLogger _nullLogger;
 
     public OutputGeneratorTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        _sourceDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(_tempDir);
+        Directory.CreateDirectory(_sourceDir);
         _nullLogger = new BuildLogger(VerbosityLevel.None, TextWriter.Null, TextWriter.Null);
     }
 
@@ -22,6 +25,8 @@ public class OutputGeneratorTests : IDisposable
     {
         if (Directory.Exists(_tempDir))
             Directory.Delete(_tempDir, recursive: true);
+        if (Directory.Exists(_sourceDir))
+            Directory.Delete(_sourceDir, recursive: true);
     }
 
     [Fact]
@@ -220,6 +225,102 @@ public class OutputGeneratorTests : IDisposable
     }
 
     [Fact]
+    public void Generates_readme_and_nexus_description_files()
+    {
+        var readme = WriteReadme("source-description.md", "# Loot Box\r\n\r\nAdds loot.\r\n");
+        var converter = new TestMarkdownToBbCodeConverter(fixedOutput: "[b]Loot Box[/b]\n");
+
+        var diagnostics = OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            [],
+            SampleModInfo(),
+            readme,
+            converter,
+            _tempDir,
+            dryRun: false,
+            clean: false,
+            _nullLogger);
+
+        Assert.Empty(diagnostics);
+        Assert.Equal(File.ReadAllBytes(readme.Path), File.ReadAllBytes(Path.Combine(_tempDir, "README.md")));
+        Assert.Equal("[b]Loot Box[/b]\n", File.ReadAllText(Path.Combine(_tempDir, "NEXUS_DESCRIPTION.bbcode")));
+        Assert.True(converter.WasCalled);
+        Assert.Equal(readme.Path, converter.MarkdownPath);
+        Assert.Equal(Path.Combine(_tempDir, "NEXUS_DESCRIPTION.bbcode"), converter.OutputPath);
+    }
+
+    [Fact]
+    public void Dry_run_does_not_write_readme_or_call_converter()
+    {
+        var readme = WriteReadme("source-description.md", "# Loot Box\n");
+        var converter = new TestMarkdownToBbCodeConverter();
+
+        OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            [],
+            SampleModInfo(),
+            readme,
+            converter,
+            _tempDir,
+            dryRun: true,
+            clean: false,
+            _nullLogger);
+
+        Assert.False(File.Exists(Path.Combine(_tempDir, "README.md")));
+        Assert.False(File.Exists(Path.Combine(_tempDir, "NEXUS_DESCRIPTION.bbcode")));
+        Assert.False(converter.WasCalled);
+    }
+
+    [Fact]
+    public void Converter_failure_returns_error()
+    {
+        var readme = WriteReadme("source-description.md", "# Loot Box\n");
+        var converter = new TestMarkdownToBbCodeConverter(
+            [
+                new Diagnostic(
+                    DiagnosticSeverity.Error,
+                    "conversion failed",
+                    readme.Path)
+            ]);
+
+        var diagnostics = OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            [],
+            SampleModInfo(),
+            readme,
+            converter,
+            _tempDir,
+            dryRun: false,
+            clean: false,
+            _nullLogger);
+
+        Assert.Contains(diagnostics, d => d.Severity == DiagnosticSeverity.Error
+            && d.Message.Contains("conversion failed", StringComparison.Ordinal));
+        Assert.False(File.Exists(Path.Combine(_tempDir, "NEXUS_DESCRIPTION.bbcode")));
+    }
+
+    [Fact]
+    public void Missing_converter_output_returns_error()
+    {
+        var readme = WriteReadme("source-description.md", "# Loot Box\n");
+        var converter = new TestMarkdownToBbCodeConverter(writeOutput: false);
+
+        var diagnostics = OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            [],
+            SampleModInfo(),
+            readme,
+            converter,
+            _tempDir,
+            dryRun: false,
+            clean: false,
+            _nullLogger);
+
+        Assert.Contains(diagnostics, d => d.Severity == DiagnosticSeverity.Error
+            && d.Message.Contains("did not create", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Dry_run_with_nonexistent_output_dir_produces_no_errors()
     {
         var missing = Path.Combine(_tempDir, "does_not_exist");
@@ -267,6 +368,30 @@ public class OutputGeneratorTests : IDisposable
 
         Assert.False(File.Exists(Path.Combine(_tempDir, "stale.txt")), "Stale file must be removed by --clean.");
         Assert.True(File.Exists(Path.Combine(_tempDir, "Config", "items.xml")));
+    }
+
+    [Fact]
+    public void Clean_removes_stale_readme_and_nexus_files()
+    {
+        File.WriteAllText(Path.Combine(_tempDir, "README.md"), "stale");
+        File.WriteAllText(Path.Combine(_tempDir, "NEXUS_DESCRIPTION.bbcode"), "stale");
+
+        var readme = WriteReadme("source-description.md", "# Loot Box\n");
+
+        var diagnostics = OutputGenerator.Generate(
+            [Frag("a", "items", "<append/>")],
+            [],
+            SampleModInfo(),
+            readme,
+            new TestMarkdownToBbCodeConverter(fixedOutput: "[b]fresh[/b]\n"),
+            _tempDir,
+            dryRun: false,
+            clean: true,
+            _nullLogger);
+
+        Assert.Empty(diagnostics);
+        Assert.Equal("# Loot Box\n", File.ReadAllText(Path.Combine(_tempDir, "README.md")));
+        Assert.Equal("[b]fresh[/b]\n", File.ReadAllText(Path.Combine(_tempDir, "NEXUS_DESCRIPTION.bbcode")));
     }
 
     [Fact]
@@ -353,5 +478,12 @@ public class OutputGeneratorTests : IDisposable
         Author: "Aleksei Khozin",
         Version: "0.1.0",
         Website: "https://github.com/alekho77/epic_7d2d_mods");
+
+    private ReadmeSource WriteReadme(string fileName, string content)
+    {
+        var path = Path.Combine(_sourceDir, fileName);
+        File.WriteAllText(path, content);
+        return new ReadmeSource(path);
+    }
 }
 

@@ -21,9 +21,14 @@ public sealed class ProjectFileLoaderTests : IDisposable
     [Fact]
     public void Valid_project_yaml_loads_metadata_and_mixed_sources()
     {
+        var readmePath = Path.Combine(_tempDir, "docs", "lootbox.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(readmePath)!);
+        File.WriteAllText(readmePath, "# Loot Box\n");
+
         var projectFile = WriteProject("""
 modFolder: EV_LootBox
 output: dist
+readme: docs/lootbox.md
 modInfo:
   name: EV_LootBox
   displayName: Loot Box
@@ -45,6 +50,8 @@ sources:
         Assert.Equal("EV_LootBox", project.ModFolder);
         Assert.Equal(Path.Combine(_tempDir, "dist"), project.OutputRoot);
         Assert.Equal("Loot Box", project.ModInfo.DisplayName);
+        Assert.NotNull(project.Readme);
+        Assert.Equal(readmePath, project.Readme.Path);
         Assert.Collection(project.Sources,
             source =>
             {
@@ -61,6 +68,73 @@ sources:
                 Assert.Equal(Path.Combine(_tempDir, "shared", "non-recursive-dir"), source.Path);
                 Assert.False(source.Recursive);
             });
+    }
+
+    [Fact]
+    public void Missing_readme_field_is_allowed()
+    {
+        var projectFile = WriteProject(ValidYaml());
+
+        var (project, diagnostics) = ProjectFileLoader.Load(projectFile);
+
+        Assert.Empty(diagnostics);
+        Assert.NotNull(project);
+        Assert.Null(project.Readme);
+    }
+
+    [Fact]
+    public void Readme_path_resolves_relative_to_project_file()
+    {
+        var readmePath = Path.Combine(_tempDir, "docs", "custom-name.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(readmePath)!);
+        File.WriteAllText(readmePath, "# Loot Box\n");
+
+        var yaml = InsertAfterLine(ValidYaml(), "output: dist", "readme: docs/custom-name.md");
+        var projectFile = WriteProject(yaml);
+
+        var (project, diagnostics) = ProjectFileLoader.Load(projectFile);
+
+        Assert.Empty(diagnostics);
+        Assert.NotNull(project);
+        Assert.NotNull(project.Readme);
+        Assert.Equal(readmePath, project.Readme.Path);
+    }
+
+    [Fact]
+    public void Empty_readme_path_returns_error()
+    {
+        var yaml = InsertAfterLine(ValidYaml(), "output: dist", "readme: \"\"");
+        var projectFile = WriteProject(yaml);
+
+        var (project, diagnostics) = ProjectFileLoader.Load(projectFile);
+
+        Assert.Null(project);
+        Assert.Contains(diagnostics, d => d.Message.Contains("readme", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Missing_readme_file_returns_error()
+    {
+        var yaml = InsertAfterLine(ValidYaml(), "output: dist", "readme: docs/missing.md");
+        var projectFile = WriteProject(yaml);
+
+        var (project, diagnostics) = ProjectFileLoader.Load(projectFile);
+
+        Assert.Null(project);
+        Assert.Contains(diagnostics, d => d.Message.Contains("readme file does not exist", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Readme_directory_returns_error()
+    {
+        Directory.CreateDirectory(Path.Combine(_tempDir, "docs"));
+        var yaml = InsertAfterLine(ValidYaml(), "output: dist", "readme: docs");
+        var projectFile = WriteProject(yaml);
+
+        var (project, diagnostics) = ProjectFileLoader.Load(projectFile);
+
+        Assert.Null(project);
+        Assert.Contains(diagnostics, d => d.Message.Contains("not a directory", StringComparison.Ordinal));
     }
 
     [Theory]
@@ -126,6 +200,17 @@ sources:
             NormalizeYaml(yaml)
                 .Split('\n')
                 .Where(line => !line.StartsWith(prefix, StringComparison.Ordinal)));
+
+    private static string InsertAfterLine(string yaml, string targetLine, string insertedLine)
+    {
+        var lines = NormalizeYaml(yaml).Split('\n').ToList();
+        var index = lines.FindIndex(line => string.Equals(line, targetLine, StringComparison.Ordinal));
+        if (index < 0)
+            throw new InvalidOperationException($"Line not found: {targetLine}");
+
+        lines.Insert(index + 1, insertedLine);
+        return string.Join("\n", lines);
+    }
 
     private static string NormalizeYaml(string yaml) =>
         yaml.Replace("\r\n", "\n").Replace("\r", "\n");

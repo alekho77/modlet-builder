@@ -122,7 +122,25 @@ public sealed class CommandLineIntegrationTests : IDisposable
         Assert.True(File.Exists(Path.Combine(cliOut, "EV_LootBox", "Config", "recipes.xml")));
     }
 
-    private string WriteProjectWithSingleSource()
+    [Fact]
+    public void Project_build_with_readme_writes_readme_and_nexus_description()
+    {
+        var projectFile = WriteProjectWithSingleSource(includeReadme: true);
+        var cliOut = Path.Combine(_tempRoot, "readme-out");
+        var converter = new TestMarkdownToBbCodeConverter(fixedOutput: "[b]converted[/b]\n");
+
+        var (exitCode, _, _) = SampleTestHelper.RunBuildCapturing(
+            ["build", "--proj", projectFile, "--out", cliOut, "--verbosity", "none"],
+            converter);
+
+        var modDir = Path.Combine(cliOut, "EV_LootBox");
+        Assert.Equal(0, exitCode);
+        Assert.Equal("# Loot Box\n", File.ReadAllText(Path.Combine(modDir, "README.md")));
+        Assert.Equal("[b]converted[/b]\n", File.ReadAllText(Path.Combine(modDir, "NEXUS_DESCRIPTION.bbcode")));
+        Assert.True(converter.WasCalled);
+    }
+
+    private string WriteProjectWithSingleSource(bool includeReadme = false)
     {
         var sourceDir = Path.Combine(_tempRoot, "project-src");
         Directory.CreateDirectory(sourceDir);
@@ -132,10 +150,14 @@ public sealed class CommandLineIntegrationTests : IDisposable
 </modlet>
 """);
 
+        if (includeReadme)
+            File.WriteAllText(Path.Combine(_tempRoot, "readme.md"), "# Loot Box\n");
+
         var projectFile = Path.Combine(_tempRoot, "mod.proj.yml");
-        File.WriteAllText(projectFile, """
+        File.WriteAllText(projectFile, $"""
 modFolder: EV_LootBox
 output: yaml-out
+{(includeReadme ? "readme: readme.md" : string.Empty)}
 modInfo:
   name: EV_LootBox
   displayName: Loot Box

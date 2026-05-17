@@ -16,12 +16,42 @@ internal static class OutputGenerator
         bool dryRun,
         bool clean,
         BuildLogger logger) =>
-        Generate(fragments, localizationEntries, modInfo: null, outDir, dryRun, clean, logger);
+        Generate(
+            fragments,
+            localizationEntries,
+            modInfo: null,
+            readme: null,
+            markdownConverter: null,
+            outDir: outDir,
+            dryRun: dryRun,
+            clean: clean,
+            logger: logger);
 
     internal static IReadOnlyList<Diagnostic> Generate(
         IReadOnlyList<Fragment> fragments,
         IReadOnlyList<LocalizationEntry> localizationEntries,
         ModInfo? modInfo,
+        string outDir,
+        bool dryRun,
+        bool clean,
+        BuildLogger logger) =>
+        Generate(
+            fragments,
+            localizationEntries,
+            modInfo,
+            readme: null,
+            markdownConverter: null,
+            outDir: outDir,
+            dryRun: dryRun,
+            clean: clean,
+            logger: logger);
+
+    internal static IReadOnlyList<Diagnostic> Generate(
+        IReadOnlyList<Fragment> fragments,
+        IReadOnlyList<LocalizationEntry> localizationEntries,
+        ModInfo? modInfo,
+        ReadmeSource? readme,
+        IMarkdownToBbCodeConverter? markdownConverter,
         string outDir,
         bool dryRun,
         bool clean,
@@ -33,7 +63,7 @@ internal static class OutputGenerator
 
         if (dryRun)
         {
-            ReportDryRun(fragments, localizationEntries, modInfo, outDir, clean, logger);
+            ReportDryRun(fragments, localizationEntries, modInfo, readme, outDir, clean, logger);
             return diagnostics;
         }
 
@@ -76,6 +106,10 @@ internal static class OutputGenerator
         var modInfoDiagnostics = ModInfoGenerator.Generate(modInfo, outDir, dryRun: false, logger);
         diagnostics.AddRange(modInfoDiagnostics);
 
+        var readmeDiagnostics = ReadmeArtifactsGenerator.Generate(
+            readme, markdownConverter, outDir, dryRun: false, logger);
+        diagnostics.AddRange(readmeDiagnostics);
+
         return diagnostics;
     }
 
@@ -85,6 +119,7 @@ internal static class OutputGenerator
         IReadOnlyList<Fragment> fragments,
         IReadOnlyList<LocalizationEntry> localizationEntries,
         ModInfo? modInfo,
+        ReadmeSource? readme,
         string outDir,
         bool clean,
         BuildLogger logger)
@@ -113,6 +148,7 @@ internal static class OutputGenerator
 
         LocalizationGenerator.Generate(localizationEntries, outDir, dryRun: true, logger);
         ModInfoGenerator.Generate(modInfo, outDir, dryRun: true, logger);
+        ReadmeArtifactsGenerator.Generate(readme, null, outDir, dryRun: true, logger);
     }
 
     // ── Real output ───────────────────────────────────────────────────────────
