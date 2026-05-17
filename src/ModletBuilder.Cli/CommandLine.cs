@@ -10,7 +10,12 @@ using ModletBuilder.Core.Validation;
 
 internal static class CommandLine
 {
-    public static int Run(string[] args)
+    public static int Run(string[] args) =>
+        Run(args, DotNetToolMarkdownToBbCodeConverter.Instance);
+
+    internal static int Run(
+        string[] args,
+        IMarkdownToBbCodeConverter markdownConverter)
     {
         if (args.Length == 0)
         {
@@ -32,7 +37,7 @@ internal static class CommandLine
                 return ExitCodes.Success;
 
             case "build":
-                return RunBuild(args[1..]);
+                return RunBuild(args[1..], markdownConverter);
 
             default:
                 Console.Error.WriteLine($"Unknown command: {command}");
@@ -42,7 +47,9 @@ internal static class CommandLine
         }
     }
 
-    private static int RunBuild(string[] args)
+    private static int RunBuild(
+        string[] args,
+        IMarkdownToBbCodeConverter markdownConverter)
     {
         var (options, parseErrors) = BuildCommand.ParseArgs(args);
         if (options is null)
@@ -62,6 +69,7 @@ internal static class CommandLine
         var sources = options.ToSourceSpecs();
         var outputDir = options.OutputDir;
         ModInfo? modInfo = null;
+        ReadmeSource? readme = null;
 
         if (options.ProjectFile is not null)
         {
@@ -96,6 +104,7 @@ internal static class CommandLine
 
             sources = project.Sources.Concat(options.ToSourceSpecs()).ToArray();
             modInfo = project.ModInfo;
+            readme = project.Readme;
             logger.Debug($"Project build output directory resolved to '{outputDir}'.");
         }
 
@@ -163,7 +172,15 @@ internal static class CommandLine
 
         // ── Stage 2: Output generation ────────────────────────────────────────
         var generateDiagnostics = OutputGenerator.Generate(
-            ordered, localizationEntriesResolved, modInfo, outputDir!, options.DryRun, options.Clean, logger);
+            ordered,
+            localizationEntriesResolved,
+            modInfo,
+            readme,
+            markdownConverter,
+            outputDir!,
+            options.DryRun,
+            options.Clean,
+            logger);
         allDiagnostics.AddRange(generateDiagnostics);
 
         EmitDiagnostics(allDiagnostics, logger);
@@ -227,7 +244,7 @@ internal static class CommandLine
         writer.WriteLine("      --src <path> [<path> ...]  One or more source files or directories");
         writer.WriteLine("                                 containing *.frag.xml files.");
         writer.WriteLine("      --proj <file.yml>          Project YAML file with mod metadata, output root,");
-        writer.WriteLine("                                 mod folder name, and source entries.");
+        writer.WriteLine("                                 mod folder name, optional README, and source entries.");
         writer.WriteLine("      --out <path>               In --src mode: output mod directory. Required.");
         writer.WriteLine("                                 In --proj mode: overrides the project output root.");
         writer.WriteLine("      --recursive                Scan CLI --src directories recursively.");

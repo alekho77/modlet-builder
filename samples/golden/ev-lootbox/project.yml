@@ -1,5 +1,6 @@
 modFolder: EV_LootBox
 output: dist
+readme: readme.md
 
 modInfo:
   name: EV_LootBox

@@ -57,6 +57,7 @@ internal static class ProjectFileLoader
         var modFolder = RequireScalar(root, "modFolder", fullProjectFile, diagnostics);
         var output = RequireScalar(root, "output", fullProjectFile, diagnostics);
         var modInfo = ParseModInfo(root, fullProjectFile, diagnostics);
+        var readme = ParseReadme(root, projectDir, fullProjectFile, diagnostics);
         var sources = ParseSources(root, projectDir, fullProjectFile, diagnostics);
 
         if (diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
@@ -66,7 +67,48 @@ internal static class ProjectFileLoader
             ModFolder: modFolder!,
             OutputRoot: ResolveProjectPath(projectDir, output!),
             ModInfo: modInfo!,
+            Readme: readme,
             Sources: sources), diagnostics);
+    }
+
+    private static ReadmeSource? ParseReadme(
+        YamlMappingNode root,
+        string projectDir,
+        string sourceFile,
+        List<Diagnostic> diagnostics)
+    {
+        if (!TryGetChild(root, "readme", out var node))
+            return null;
+
+        if (node is not YamlScalarNode scalar || string.IsNullOrWhiteSpace(scalar.Value))
+        {
+            diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                "Project field 'readme' must be a non-empty scalar value.",
+                sourceFile));
+            return null;
+        }
+
+        var readmePath = ResolveProjectPath(projectDir, scalar.Value);
+        if (Directory.Exists(readmePath))
+        {
+            diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                "Project field 'readme' must point to a file, not a directory.",
+                readmePath));
+            return null;
+        }
+
+        if (!File.Exists(readmePath))
+        {
+            diagnostics.Add(new Diagnostic(
+                DiagnosticSeverity.Error,
+                "Project readme file does not exist.",
+                readmePath));
+            return null;
+        }
+
+        return new ReadmeSource(readmePath);
     }
 
     private static ModInfo? ParseModInfo(
@@ -289,4 +331,5 @@ internal sealed record ModProject(
     string ModFolder,
     string OutputRoot,
     ModInfo ModInfo,
+    ReadmeSource? Readme,
     IReadOnlyList<SourceSpec> Sources);
