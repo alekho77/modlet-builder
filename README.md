@@ -76,6 +76,56 @@ modlet-builder build --src src/ --out path/to/Mods/ModA
 modlet-builder build --src src/ --out path/to/Mods/ModB
 ```
 
+## Quick Start for AI Agents
+
+Use this when another repository needs both the `modlet-builder` executable and
+agent instructions for authoring 7 Days to Die modlets.
+
+Repository URL:
+
+```text
+https://github.com/alekho77/modlet-builder
+```
+
+Prompt an AI agent in the target mod repository with a request like this:
+
+```text
+Use https://github.com/alekho77/modlet-builder as the source for the
+modlet-builder utility and its 7 Days to Die modlet authoring skill. Download the
+latest GitHub Release archive for my platform, install the executable, and use
+the bundled skills/7d2d-modlet-builder package as the project instructions for
+building modlets.
+```
+
+Release archives contain:
+
+```text
+modlet-builder(.exe)
+skills/
+  7d2d-modlet-builder/
+    SKILL.md
+    references/
+    adapters/
+```
+
+Recommended downstream setup:
+
+1. Download the latest release archive for your platform from
+   `https://github.com/alekho77/modlet-builder/releases/latest`.
+2. Put `modlet-builder` or `modlet-builder.exe` somewhere on `PATH`, or keep it
+   in a repo-local tools folder and call it by path.
+3. Copy `skills/7d2d-modlet-builder/` into the target mod repository if the agent
+   supports Codex-style skills.
+4. For GitHub Copilot, copy
+   `skills/7d2d-modlet-builder/adapters/copilot-instructions.md` to
+   `.github/copilot-instructions.md`, or merge it into
+   `.github/instructions/*.instructions.md`.
+5. For agents that read repository-level instruction files, copy
+   `skills/7d2d-modlet-builder/adapters/AGENTS.md` to `AGENTS.md`.
+
+The skill package is the source of truth. The adapter files are lightweight
+copies for tools that do not load Codex skills directly.
+
 ## Quick Start for Developers
 
 1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) matching the version in [global.json](global.json).
@@ -131,6 +181,7 @@ modlet-builder/
 ├─ Directory.Build.props    — shared MSBuild properties (redirects build output)
 ├─ ModletBuilder.sln        — solution file
 ├─ docs/                    — design notes and specs
+├─ skills/                  — AI agent skill packages and adapters
 ├─ src/
 │  ├─ ModletBuilder.Cli/    — command-line entry point
 │  ├─ ModletBuilder.Core/   — core domain logic: parsing, resolution, generation
