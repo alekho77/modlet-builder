@@ -93,6 +93,12 @@ jobs:
             -p:IncludeSourceRevisionInInformationalVersion=false \
             -o publish/${{ matrix.rid }}
 
+      - name: Include skill package
+        shell: bash
+        run: |
+          mkdir -p publish/${{ matrix.rid }}/skills
+          cp -R skills/7d2d-modlet-builder publish/${{ matrix.rid }}/skills/
+
       - name: Package (zip)
         if: matrix.archive == 'zip'
         shell: pwsh
