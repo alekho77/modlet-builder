@@ -120,6 +120,29 @@ public class SourceDiscovererTests : IDisposable
     }
 
     [Fact]
+    public void Per_source_recursion_applies_independently()
+    {
+        CreateFragFile("recursive/top.frag.xml");
+        CreateFragFile("recursive/sub/nested.frag.xml");
+        CreateFragFile("flat/top.frag.xml");
+        CreateFragFile("flat/sub/nested.frag.xml");
+
+        var recursiveDir = Path.Combine(_tempDir, "recursive");
+        var flatDir = Path.Combine(_tempDir, "flat");
+
+        var (files, diagnostics) = SourceDiscoverer.Discover(
+            [
+                new SourceSpec(recursiveDir, Recursive: true),
+                new SourceSpec(flatDir, Recursive: false),
+            ]);
+
+        Assert.Empty(diagnostics);
+        Assert.Equal(3, files.Count);
+        Assert.Contains(files, f => f.EndsWith(Path.Combine("recursive", "sub", "nested.frag.xml"), StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(files, f => f.EndsWith(Path.Combine("flat", "sub", "nested.frag.xml"), StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Mixed_files_and_directories_are_accepted()
     {
         var fileA = CreateFragFile("a.frag.xml");

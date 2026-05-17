@@ -51,16 +51,56 @@ internal static class CommandLine
                 Console.Error.WriteLine($"error: {error}");
             Console.Error.WriteLine();
             Console.Error.WriteLine(
-                "Usage: modlet-builder build --src <path> [<path> ...] --out <mod-dir> " +
-                "[--recursive] [--dry-run] [--clean] [--verbosity <level>]");
+                "Usage: modlet-builder build (--src <path> [<path> ...] --out <mod-dir> | " +
+                "--proj <file.yml> [--out <output-root>]) [--recursive] [--dry-run] " +
+                "[--clean] [--verbosity <level>]");
             return ExitCodes.UsageError;
         }
 
         var logger = new BuildLogger(options.Verbosity, Console.Out, Console.Error);
         var allDiagnostics = new List<Diagnostic>();
+        var sources = options.ToSourceSpecs();
+        var outputDir = options.OutputDir;
+        ModInfo? modInfo = null;
+
+        if (options.ProjectFile is not null)
+        {
+            var (project, projectDiagnostics) = ProjectFileLoader.Load(options.ProjectFile);
+            allDiagnostics.AddRange(projectDiagnostics);
+
+            if (HasErrors(allDiagnostics))
+            {
+                EmitDiagnostics(allDiagnostics, logger);
+                return ExitCodes.BuildError;
+            }
+
+            var outputRoot = project!.OutputRoot;
+            if (options.OutputDir is not null)
+            {
+                outputRoot = Path.GetFullPath(options.OutputDir);
+                outputDir = Path.Combine(outputRoot, project.ModFolder);
+                logger.Information(
+                    $"Project output root '{project.OutputRoot}' overridden by --out '{outputRoot}'. " +
+                    $"Final mod output directory: '{outputDir}'.");
+            }
+            else
+            {
+                outputDir = Path.Combine(outputRoot, project.ModFolder);
+            }
+
+            if (options.Sources.Length > 0)
+            {
+                logger.Information(
+                    $"Adding {options.Sources.Length} CLI --src source path(s) to project sources.");
+            }
+
+            sources = project.Sources.Concat(options.ToSourceSpecs()).ToArray();
+            modInfo = project.ModInfo;
+            logger.Debug($"Project build output directory resolved to '{outputDir}'.");
+        }
 
         // ── Stage 0: Source discovery ─────────────────────────────────────────
-        var (files, discoverDiagnostics) = SourceDiscoverer.Discover(options.Sources, options.Recursive);
+        var (files, discoverDiagnostics) = SourceDiscoverer.Discover(sources);
         allDiagnostics.AddRange(discoverDiagnostics);
         logger.Debug($"Discovered {files.Count} source file(s).");
 
@@ -123,7 +163,7 @@ internal static class CommandLine
 
         // ── Stage 2: Output generation ────────────────────────────────────────
         var generateDiagnostics = OutputGenerator.Generate(
-            ordered, localizationEntriesResolved, options.OutputDir, options.DryRun, options.Clean, logger);
+            ordered, localizationEntriesResolved, modInfo, outputDir!, options.DryRun, options.Clean, logger);
         allDiagnostics.AddRange(generateDiagnostics);
 
         EmitDiagnostics(allDiagnostics, logger);
@@ -134,7 +174,7 @@ internal static class CommandLine
         if (options.DryRun)
             logger.Information("Dry run completed. No files were written.");
         else
-            logger.Information($"Build complete. Output written to '{options.OutputDir}'.");
+            logger.Information($"Build complete. Output written to '{outputDir}'.");
 
         return ExitCodes.Success;
     }
@@ -185,14 +225,15 @@ internal static class CommandLine
         writer.WriteLine();
         writer.WriteLine("'build' command options:");
         writer.WriteLine("      --src <path> [<path> ...]  One or more source files or directories");
-        writer.WriteLine("                                 containing *.frag.xml files. Required.");
-        writer.WriteLine("      --out <mod-dir>            Output mod directory. Required.");
-        writer.WriteLine("                                 Config files are written to {mod-dir}/Config/.");
-        writer.WriteLine("                                 Localization.txt, when present, is also written to {mod-dir}/Config/.");
-        writer.WriteLine("      --recursive                Scan source directories recursively.");
+        writer.WriteLine("                                 containing *.frag.xml files.");
+        writer.WriteLine("      --proj <file.yml>          Project YAML file with mod metadata, output root,");
+        writer.WriteLine("                                 mod folder name, and source entries.");
+        writer.WriteLine("      --out <path>               In --src mode: output mod directory. Required.");
+        writer.WriteLine("                                 In --proj mode: overrides the project output root.");
+        writer.WriteLine("      --recursive                Scan CLI --src directories recursively.");
         writer.WriteLine("      --dry-run                  Validate sources, resolve dependencies, and");
         writer.WriteLine("                                 report what would be built — without writing files.");
-        writer.WriteLine("      --clean                    Delete the entire --out directory before building.");
+        writer.WriteLine("      --clean                    Delete the final mod output directory before building.");
         writer.WriteLine("                                 Has no effect with --dry-run.");
         writer.WriteLine("      --verbosity <level>        Log verbosity: debug, information (default),");
         writer.WriteLine("                                 warning, error, none.");

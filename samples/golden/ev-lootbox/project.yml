@@ -1,0 +1,14 @@
+modFolder: EV_LootBox
+output: dist
+
+modInfo:
+  name: EV_LootBox
+  displayName: Loot Box
+  description: Adds a loot box with Simple, Good, and Valuable reward categories.
+  author: Aleksei Khozin
+  version: 0.1.0
+  website: https://github.com/alekho77/epic_7d2d_mods
+
+sources:
+  - path: src
+    recursive: false

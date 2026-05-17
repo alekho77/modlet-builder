@@ -59,6 +59,18 @@ tests:
       exit_code: 0
       expected_result_path: samples/golden/ev-lootbox/expected
 
+  - id: ev-lootbox-project-golden
+    name: EV LootBox Project Golden Match
+    description: Build the EV LootBox sample through a project YAML file and verify ModInfo.xml plus generated Config output.
+    command:
+      verb: build
+      project: samples/golden/ev-lootbox/project.yml
+      output: "{tempOut}"
+      verbosity: none
+    expected:
+      exit_code: 0
+      expected_result_path: samples/golden/ev-lootbox/expected-project
+
   - id: invalid-missing-dependency
     name: Missing Dependency Returns Error
     description: Build the invalid missing-dependency fixture and verify that no Config directory is created.
